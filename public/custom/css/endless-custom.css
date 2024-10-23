@@ -1,0 +1,90 @@
+canvas#revenueStatsChart {
+    width: 100% !important;
+}
+
+.graph_full svg {
+    width: 100% !important;
+}
+
+.page-main-header .main-header-right .nav-right > ul > li:nth-child(5) {
+    border-right: none !important;
+}
+
+.custom-loader {
+    position: absolute !important;
+    width: 100%;
+    height: 99%;
+    left: 0;
+}
+
+.page-header .breadcrumb {
+    margin-left: 0px !important;
+}
+
+.custom-body {
+    padding-top: 10px !important;
+}
+
+.custom-tabs .nav-link {
+    padding: 0.5rem 3rem !important;
+}
+
+
+.tabs_text_value {
+    width: 100%;
+    color: #646368;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.milliscnd_value {
+    width: 100%;
+    color: #5f6368;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.updown_value {
+    width: 100%;
+    color: #d93025;
+    font-size: 14px;
+}
+
+.j_tabs {
+    border: none;
+}
+
+.j_tabs li.nav-item a span {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
+.j_tabs li {
+    float: left;
+}
+
+.j_tabs li.nav-item a {
+    border: none;
+    border-radius: 0px;
+    text-align: center;
+    float: left;
+    padding: 0px;
+}
+
+.j_tabs li.nav-item a span.border_value {
+    margin: 0 auto;
+    width: 185px;
+    border-top: solid 5px #fff;
+    border-radius: 0 0 5px 5px;
+}
+
+.j_tabs li.nav-item a.active span.border_value {
+    border-top: solid 5px #1a73e8;
+    vertical-align: top;
+}
+
+
+
+
+
