@@ -30,5 +30,7 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 
     Route::get('/ups-data', [Api\UpsDataController::class, 'index']);
     Route::get('/ups-data/{id}', [Api\UpsDataController::class, 'show']);
-    Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
+    //Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
 });
+
+Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
