@@ -12,6 +12,7 @@ class UpsData extends Model
     protected $fillable = [
         'unique_id',
         'user_id',
+        'app_user_id',
         'input_voltage',
         'input_fault_voltage',
         'output_voltage',

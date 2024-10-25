@@ -31,7 +31,7 @@ class UpsDataController extends Controller
 
     public function show($id)
     {
-        $upsData = UpsData::find($id);
+        $upsData = UpsData::where('app_user_id', $id)->first();
 
         if (!$upsData) {
             return response()->json([
@@ -76,7 +76,7 @@ class UpsDataController extends Controller
             ], 400);
         }
 
-        $upsData = UpsData::where('user_id', $request->user_id)->first();
+        $upsData = UpsData::where('unique_id', $request->unique_id)->where('user_id', $request->user_id)->first();
 
         if ($upsData) {
             // Update existing record
@@ -94,6 +94,30 @@ class UpsDataController extends Controller
                 'message' => 'UPS data created successfully',
                 'data' => $upsData,
             ]);
+        }
+    }
+
+    public function findUniqueId(Request $request)
+    {
+        $request->validate([
+            'unique_id' => 'required|string',
+        ]);
+
+        $upsData = UpsData::where('unique_id', $request->unique_id)->first();
+
+        if ($upsData) {
+            $upsData->app_user_id = auth()->id();
+            $upsData->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "User's unique found."
+            ], 200);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unique ID not found.'
+            ], 404);
         }
     }
 }
