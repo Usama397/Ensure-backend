@@ -123,15 +123,15 @@ class UpsDataController extends Controller
 
     public function chargingStatus(Request $request)
     {
-        //$userId = auth()->id();
-        $userId = 1;
+        $userId = auth()->id();
+        //$userId = 1;
 
         if (!$userId){
             return response()->json(['error' => 'User not found.'], 404);
         }
 
         $upsData = UpsData::query()
-            ->where('user_id', $userId)
+            ->where('app_user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
 
