@@ -33,6 +33,9 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 
     Route::post('/find/unique-id', [Api\UpsDataController::class, 'findUniqueId']);
     //Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
+
+    Route::post('/toggle-settings', [Api\UpsDataController::class, 'saveSettings']);
+    Route::get('/get-toggle-settings', [Api\UpsDataController::class, 'getSettings']);
 });
 
 Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);

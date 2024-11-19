@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\UpsData;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 class UpsDataController extends Controller
 {
@@ -126,7 +128,7 @@ class UpsDataController extends Controller
         $userId = auth()->id();
         //$userId = 1;
 
-        if (!$userId){
+        if (!$userId) {
             return response()->json(['error' => 'User not found.'], 404);
         }
 
@@ -170,7 +172,7 @@ class UpsDataController extends Controller
 
         return response()->json([
             'soc' => round($soc, 3),
-            'percentage' => round($percentage, 2) .' %',
+            'percentage' => round($percentage, 2) . ' %',
             'charging' => $charging,
         ]);
     }
@@ -181,5 +183,41 @@ class UpsDataController extends Controller
         $maxVoltage = 13.5; // Maximum battery voltage (100% charge)
 
         return (($voltage - $minVoltage) / ($maxVoltage - $minVoltage)) * 100;
+    }
+
+    public function saveSettings(Request $request)
+    {
+        $request->validate([
+            'push' => 'required|boolean',
+            'text' => 'required|boolean',
+            'email' => 'required|boolean',
+        ]);
+
+        $user_id = auth()->id();
+       // $user_id = 1;
+
+        $settings = AppSetting::updateOrCreate(
+            ['app_user_id' => $user_id],
+            [
+                'push' => $request->push,
+                'text' => $request->text,
+                'email' => $request->email,
+            ]
+        );
+
+        return response()->json(['message' => 'Settings saved successfully', 'settings' => $settings], 200);
+    }
+
+    public function getSettings()
+    {
+        $user_id = auth()->id();
+       // $user_id = 1;
+        $settings = AppSetting::where('app_user_id', $user_id)->first();
+
+        if (!$settings) {
+            return response()->json(['message' => 'Settings not found'], 404);
+        }
+
+        return response()->json(['settings' => $settings], 200);
     }
 }
