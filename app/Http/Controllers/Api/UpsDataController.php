@@ -125,12 +125,12 @@ class UpsDataController extends Controller
 
     public function chargingStatus(Request $request)
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
         //$userId = 1;
 
-        if (!$userId) {
+        /*if (!$userId) {
             return response()->json(['error' => 'User not found.'], 404);
-        }
+        }*/
 
         $upsData = UpsData::query()
             ->where('app_user_id', $userId)
@@ -193,7 +193,7 @@ class UpsDataController extends Controller
             'email' => 'required|boolean',
         ]);
 
-        $user_id = auth()->id();
+        $user_id = Auth::id();
        // $user_id = 1;
 
         $settings = AppSetting::updateOrCreate(
@@ -210,7 +210,7 @@ class UpsDataController extends Controller
 
     public function getSettings()
     {
-        $user_id = auth()->id();
+        $user_id = Auth::id();
        // $user_id = 1;
         $settings = AppSetting::where('app_user_id', $user_id)->first();
 
