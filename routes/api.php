@@ -17,7 +17,7 @@ use App\Http\Controllers\Api;
 
 Route::post('login', [Api\AuthController::class, 'login']);
 Route::post('/register', [Api\AuthController::class, 'register']);
-
+Route::post('/delete-user/{id}', [Api\AuthController::class, 'deleteUser']);
 
 Route::get('auth/google/redirect', [Api\SocialAuthController::class, 'redirectToGoogle']);
 Route::get('auth/google/callback', [Api\SocialAuthController::class, 'handleGoogleCallback']);
@@ -36,7 +36,8 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 
     Route::post('/toggle-settings', [Api\UpsDataController::class, 'saveSettings']);
     Route::get('/get-toggle-settings', [Api\UpsDataController::class, 'getSettings']);
+
+    Route::get('/charging-status', [Api\UpsDataController::class, 'chargingStatus']);
 });
 
 Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
-Route::get('/charging-status', [Api\UpsDataController::class, 'chargingStatus']);

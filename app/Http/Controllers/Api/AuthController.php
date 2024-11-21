@@ -88,4 +88,24 @@ class AuthController extends Controller
             'message' => 'Logged out successfully',
         ]);
     }
+
+
+    public function deleteUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully',
+        ], 200);
+    }
 }
