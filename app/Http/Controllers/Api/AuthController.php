@@ -9,6 +9,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
+use Swift_TransportException;
+use Illuminate\Support\Facades\Log;
+
 class AuthController extends Controller
 {
     public function login(Request $request)
@@ -111,31 +114,50 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email|exists:users,email',
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email address.',
+                    'errors' => $validator->errors(),
+                ], 400);
+            }
+
+            $status = Password::sendResetLink($request->only('email'));
+
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password reset link sent to your email.',
+                ], 200);
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email address.',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
+                'message' => 'Unable to send reset link. Please try again.',
+            ], 500);
+        } catch (Swift_TransportException $e) {
+            // Log the actual error for debugging
+            Log::error('Mail Sending Error: ' . $e->getMessage());
 
-        $status = Password::sendResetLink($request->only('email'));
-
-        if ($status === Password::RESET_LINK_SENT) {
+            // Return a user-friendly response
             return response()->json([
-                'success' => true,
-                'message' => 'Password reset link sent to your email.',
-            ], 200);
-        }
+                'success' => false,
+                'message' => 'Mail server is not configured. Please contact support.',
+            ], 500);
+        } catch (\Exception $e) {
+            // Handle other exceptions if needed
+            Log::error('General Error: ' . $e->getMessage());
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Unable to send reset link. Please try again.',
-        ], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'An unexpected error occurred. Please try again later.',
+            ], 500);
+        }
     }
 
     public function resetPassword(Request $request)
