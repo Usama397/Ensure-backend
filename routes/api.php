@@ -17,7 +17,8 @@ use App\Http\Controllers\Api;
 
 Route::post('login', [Api\AuthController::class, 'login']);
 Route::post('/register', [Api\AuthController::class, 'register']);
-Route::post('/delete-user/{id}', [Api\AuthController::class, 'deleteUser']);
+Route::post('/forgot-password', [Api\AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [Api\AuthController::class, 'resetPassword']);
 
 Route::get('auth/google/redirect', [Api\SocialAuthController::class, 'redirectToGoogle']);
 Route::get('auth/google/callback', [Api\SocialAuthController::class, 'handleGoogleCallback']);
@@ -27,6 +28,7 @@ Route::get('auth/facebook/callback', [Api\SocialAuthController::class, 'handleFa
 
 Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
     Route::post('logout', [Api\AuthController::class, 'logout']);
+    Route::post('/delete-user/{id}', [Api\AuthController::class, 'deleteUser']);
 
     Route::get('/ups-data', [Api\UpsDataController::class, 'index']);
     Route::get('/ups-data/{id}', [Api\UpsDataController::class, 'show']);
@@ -38,6 +40,7 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
     Route::get('/get-toggle-settings', [Api\UpsDataController::class, 'getSettings']);
 
     Route::get('/charging-status', [Api\UpsDataController::class, 'chargingStatus']);
+
 });
 
 Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
