@@ -19,7 +19,6 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            //'device_name' => 'required',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -30,8 +29,8 @@ class AuthController extends Controller
                 'message' => 'Invalid credentials',
             ], 401);
         }
-        $device_name = "mobile_app";
-        $token = $user->createToken($device_name)->plainTextToken;
+
+        $token = $user->createToken('')->plainTextToken;
 
         return response()->json([
             'status' => 200,
