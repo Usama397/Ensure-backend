@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\UpsData;
+use App\Models\UpsSpecification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -110,6 +111,13 @@ class UpsDataController extends Controller
         if ($upsData) {
             $upsData->app_user_id = auth()->id();
             $upsData->save();
+
+            $upsSpecification = UpsSpecification::where('unique_id', $request->unique_id)->first();
+
+            if ($upsSpecification) {
+                $upsSpecification->app_user_id = auth()->id();
+                $upsSpecification->save();
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -220,4 +228,41 @@ class UpsDataController extends Controller
 
         return response()->json(['settings' => $settings], 200);
     }
+
+    public function userSpecificationsStore(Request $request)
+    {
+        $request->validate([
+            'unique_id' => 'required|string',
+            'continuous_power' => 'required|string',
+            'energy' => 'required|string',
+            'dimensions' => 'required|string',
+        ]);
+
+        $upsSpecification = UpsSpecification::where('unique_id', $request->unique_id)->first();
+
+        if ($upsSpecification) {
+            $upsSpecification->update([
+                'continuous_power' => $request->continuous_power,
+                'energy' => $request->energy,
+                'dimensions' => $request->dimensions,
+            ]);
+
+            $message = 'UPS Specification updated successfully';
+        } else {
+            $upsSpecification = UpsSpecification::create([
+                'unique_id' => $request->unique_id,
+                'continuous_power' => $request->continuous_power,
+                'energy' => $request->energy,
+                'dimensions' => $request->dimensions,
+            ]);
+
+            $message = 'UPS Specification saved successfully';
+        }
+
+        return response()->json([
+            'message' => $message,
+            'data' => $upsSpecification,
+        ], 200);
+    }
+
 }

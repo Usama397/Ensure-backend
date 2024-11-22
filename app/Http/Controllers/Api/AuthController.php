@@ -213,4 +213,14 @@ class AuthController extends Controller
         ], 200);
     }
 
+    public function getDeviceName()
+    {
+        $user = Auth::user();
+
+        return response()->json([
+            'message' => 'Device name retrieved successfully',
+            'device_name' => $user->device_name,
+        ], 200);
+    }
+
 }

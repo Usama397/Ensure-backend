@@ -30,6 +30,7 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
     Route::post('logout', [Api\AuthController::class, 'logout']);
     Route::post('/delete-user/{id}', [Api\AuthController::class, 'deleteUser']);
     Route::post('/device-name', [Api\AuthController::class, 'saveDeviceName']);
+    Route::get('/get-device-name', [Api\AuthController::class, 'getDeviceName']);
 
     Route::get('/ups-data', [Api\UpsDataController::class, 'index']);
     Route::get('/ups-data/{id}', [Api\UpsDataController::class, 'show']);
@@ -44,3 +45,4 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 });
 
 Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
+Route::post('/ups-specifications/store', [Api\UpsDataController::class, 'userSpecificationsStore']);
