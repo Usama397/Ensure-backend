@@ -197,4 +197,21 @@ class AuthController extends Controller
         ], 400);
     }
 
+    public function saveDeviceName(Request $request)
+    {
+        $request->validate([
+            'device_name' => 'required',
+        ]);
+
+        $user = Auth::user();
+
+        $user->device_name = $request->device_name;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Device name saved successfully',
+            'device_name' => $user->device_name,
+        ], 200);
+    }
+
 }
