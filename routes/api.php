@@ -31,6 +31,8 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
     Route::post('/delete-user/{id}', [Api\AuthController::class, 'deleteUser']);
     Route::post('/device-name', [Api\AuthController::class, 'saveDeviceName']);
     Route::get('/get-device-name', [Api\AuthController::class, 'getDeviceName']);
+    Route::get('/user/profile', [Api\AuthController::class, 'showProfile']);
+    Route::post('/edit-user/profile', [Api\AuthController::class, 'updateProfile']);
 
     Route::get('/ups-data', [Api\UpsDataController::class, 'index']);
     Route::get('/ups-data/{id}', [Api\UpsDataController::class, 'show']);
