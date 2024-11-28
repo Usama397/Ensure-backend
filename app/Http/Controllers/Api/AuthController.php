@@ -242,13 +242,6 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
-
-       // dd($request->headers->all());
-        $requestData = json_decode($request->getContent(), true);
-        dump($requestData);
-        dump($request->getContent());
-        dd($request->all());
-
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
