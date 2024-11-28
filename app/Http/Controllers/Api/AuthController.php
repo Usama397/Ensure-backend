@@ -250,14 +250,14 @@ class AuthController extends Controller
             'password' => 'required|min:8|confirmed',
             'phone_no' => 'required|string',
         ]);
-dd($validator);
+
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
                 'errors' => $validator->errors(),
             ], 422);
         }
-
+dd($request->all());
         $user->name = $request->name;
         $user->email = $request->email;
         $user->password = bcrypt($request->password); // Hash the password
