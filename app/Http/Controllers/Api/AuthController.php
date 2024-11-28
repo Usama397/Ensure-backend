@@ -244,6 +244,8 @@ class AuthController extends Controller
     {
 
        // dd($request->headers->all());
+        $requestData = json_decode($request->getContent(), true);
+        dump($requestData);
         dump($request->getContent());
         dd($request->all());
 
