@@ -244,8 +244,6 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
-        $requestData = json_decode($request->getContent(), true);
-dd($requestData);
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -253,13 +251,13 @@ dd($requestData);
             'phone_no' => 'required|string',
         ]);
 
-        /*if ($validator->fails()) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
                 'errors' => $validator->errors(),
             ], 400);
-        }*/
+        }
 
         $user->name = $request->name;
         $user->email = $request->email;
