@@ -243,14 +243,14 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
-dd($user);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'required|min:8|confirmed',
             'phone_no' => 'required|string',
         ]);
-
+dd($validator);
         if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
