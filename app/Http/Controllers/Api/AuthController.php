@@ -243,10 +243,10 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
 
-        \Log::info('Headers:', $request->headers->all());
+        dd($request->headers->all());
         \Log::info('Raw Content:', [$request->getContent()]);
         \Log::info('All Inputs:', $request->all());
-        
+
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
