@@ -251,13 +251,13 @@ class AuthController extends Controller
             'phone_no' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
+        /*if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
                 'errors' => $validator->errors(),
             ], 400);
-        }
+        }*/
 
         $user->name = $request->name;
         $user->email = $request->email;
