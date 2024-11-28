@@ -250,12 +250,13 @@ class AuthController extends Controller
             'password' => 'required|min:8|confirmed',
             'phone_no' => 'required|string',
         ]);
-dd($user->id);
+
         if ($validator->fails()) {
             return response()->json([
-                'status' => 'error',
+                'success' => false,
+                'message' => 'Validation failed.',
                 'errors' => $validator->errors(),
-            ], 422);
+            ], 400);
         }
 
         $user->name = $request->name;
