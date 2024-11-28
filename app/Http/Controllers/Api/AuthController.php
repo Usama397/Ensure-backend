@@ -243,9 +243,9 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
 
-        dd($request->headers->all());
-        \Log::info('Raw Content:', [$request->getContent()]);
-        \Log::info('All Inputs:', $request->all());
+       // dd($request->headers->all());
+        dump($request->getContent());
+        dd($request->all());
 
         $user = Auth::user();
 
