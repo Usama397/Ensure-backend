@@ -242,11 +242,16 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
+
+        \Log::info('Headers:', $request->headers->all());
+        \Log::info('Raw Content:', [$request->getContent()]);
+        \Log::info('All Inputs:', $request->all());
+        
         $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required',
+            'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'required|min:8|confirmed',
             'phone_no' => 'required|string',
         ]);
