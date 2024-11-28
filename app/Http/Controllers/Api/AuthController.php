@@ -225,7 +225,7 @@ class AuthController extends Controller
 
     public function showProfile(Request $request)
     {
-        $user = $request->user();
+        $user = Auth::user();
 
         return response()->json([
             'status' => 'success',
@@ -242,7 +242,7 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
-        $user = $request->user();
+        $user = Auth::user();
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -270,6 +270,4 @@ class AuthController extends Controller
             'data' => $user,
         ]);
     }
-
-
 }
