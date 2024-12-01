@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
 use Swift_TransportException;
@@ -234,6 +235,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone_no' => $user->phone_no,
+                'profile_image' => $user->profile_image ? asset('storage/profile_images/' . $user->profile_image) : null,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ],
@@ -247,8 +249,9 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'required|min:8|confirmed',
+            'password' => 'nullable|min:8|confirmed',
             'phone_no' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', //5MB
         ]);
 
         if ($validator->fails()) {
@@ -261,14 +264,37 @@ class AuthController extends Controller
 
         $user->name = $request->name;
         $user->email = $request->email;
-        $user->password = bcrypt($request->password); // Hash the password
+        if ($request->filled('password')) {
+            $user->password = bcrypt($request->password); // Hash the password if provided
+        }
         $user->phone_no = $request->phone_no;
+
+        if ($request->hasFile('image')) {
+            // Delete the old image if it exists
+            if ($user->profile_image) {
+                Storage::delete('public/profile_images/' . $user->profile_image);
+            }
+
+            $image = $request->file('image');
+            $originalName = str_replace(' ', '_', $image->getClientOriginalName());
+            $imageName = time() . '_' . $originalName;
+            $image->storeAs('public/profile_images', $imageName);
+
+            $user->profile_image = $imageName;
+        }
+
         $user->save();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile updated successfully',
-            'data' => $user,
+            'data' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone_no' => $user->phone_no,
+                'image_url' => $user->profile_image ? asset('storage/profile_images/' . $user->profile_image) : null,
+            ],
         ]);
     }
+
 }
