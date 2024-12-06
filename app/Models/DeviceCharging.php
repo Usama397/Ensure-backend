@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class DeviceCharging extends Model
 {
     use HasFactory;
+    protected $table = 'device_charging'; // Explicit table name
 
     protected $fillable = [
         'serial_key',
