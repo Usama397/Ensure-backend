@@ -17,6 +17,19 @@ class DeviceCharging extends Model
         'charging_status',
         'event',
         'specific_day',
+        'app_user_id',
+        'user_id',
     ];
+    public function appUser()
+{
+    return $this->belongsTo(User::class, 'app_user_id');
 }
+
+public function user()
+{
+    return $this->belongsTo(User::class, 'user_id');
+}
+
+}
+
 
