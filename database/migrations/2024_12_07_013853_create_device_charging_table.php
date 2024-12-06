@@ -16,8 +16,8 @@ class CreateDeviceChargingTable extends Migration
         Schema::create('device_charging', function (Blueprint $table) {
             $table->id();
             $table->string('serial_key');
-            $table->timestamp('charging_start_time');
-            $table->timestamp('charging_end_time');
+            $table->timestamp('charging_start_time')->useCurrent(); // Default to current timestamp
+            $table->timestamp('charging_end_time')->useCurrent();   // Default to current timestamp
             $table->string('charging_status');
             $table->text('event');
             $table->date('specific_day');
