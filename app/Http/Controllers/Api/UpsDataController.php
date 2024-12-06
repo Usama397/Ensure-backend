@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\UpsData;
 use App\Models\UpsSpecification;
+use App\Models\DeviceCharging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -263,6 +264,32 @@ class UpsDataController extends Controller
             'message' => $message,
             'data' => $upsSpecification,
         ], 200);
+    }
+
+    public function devicechargingStore(Request $request)
+    {
+        $request->validate([
+            'serial_key' => 'required|string',
+            'charging_start_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_end_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_status' => 'required|string',
+            'event' => 'required|string',
+            'specific_day' => 'required|date_format:Y-m-d',
+        ]);
+
+        $chargingData = DeviceCharging::create([
+            'serial_key' => $request->serial_key,
+            'charging_start_time' => $request->charging_start_time,
+            'charging_end_time' => $request->charging_end_time,
+            'charging_status' => $request->charging_status,
+            'event' => $request->event,
+            'specific_day' => $request->specific_day,
+        ]);
+
+        return response()->json([
+            'message' => 'Charging data stored successfully.',
+            'data' => $chargingData,
+        ], 201);
     }
 
 }
