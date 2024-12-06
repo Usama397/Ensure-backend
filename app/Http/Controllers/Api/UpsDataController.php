@@ -276,20 +276,43 @@ class UpsDataController extends Controller
             'event' => 'required|string',
             'specific_day' => 'required|date_format:Y-m-d',
         ]);
-
-        $chargingData = DeviceCharging::create([
-            'serial_key' => $request->serial_key,
-            'charging_start_time' => $request->charging_start_time,
-            'charging_end_time' => $request->charging_end_time,
-            'charging_status' => $request->charging_status,
-            'event' => $request->event,
-            'specific_day' => $request->specific_day,
-        ]);
-
-        return response()->json([
-            'message' => 'Charging data stored successfully.',
-            'data' => $chargingData,
-        ], 201);
+    
+        // Check if the record already exists for the given serial_key and specific_day
+        $chargingData = DeviceCharging::where('serial_key', $request->serial_key)
+            ->where('specific_day', $request->specific_day)
+            ->first();
+    
+        if ($chargingData) {
+            // Update existing record
+            $chargingData->update([
+                'charging_start_time' => $request->charging_start_time,
+                'charging_end_time' => $request->charging_end_time,
+                'charging_status' => $request->charging_status,
+                'event' => $request->event,
+            ]);
+    
+            return response()->json([
+                'status' => 200,
+                'message' => 'Charging data updated successfully.',
+                'data' => $chargingData,
+            ]);
+        } else {
+            // Create a new record
+            $chargingData = DeviceCharging::create([
+                'serial_key' => $request->serial_key,
+                'charging_start_time' => $request->charging_start_time,
+                'charging_end_time' => $request->charging_end_time,
+                'charging_status' => $request->charging_status,
+                'event' => $request->event,
+                'specific_day' => $request->specific_day,
+            ]);
+    
+            return response()->json([
+                'status' => 201,
+                'message' => 'Charging data created successfully.',
+                'data' => $chargingData,
+            ]);
+        }
     }
-
+    
 }
