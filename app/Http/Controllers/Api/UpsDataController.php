@@ -314,5 +314,38 @@ class UpsDataController extends Controller
             ]);
         }
     }
+
+    public function history(Request $request)
+{
+    // Retrieve optional filters from query parameters
+    $query = DeviceCharging::query();
+
+    if ($request->has('serial_key')) {
+        $query->where('serial_key', $request->serial_key);
+    }
+
+    if ($request->has('specific_day')) {
+        $query->where('specific_day', $request->specific_day);
+    }
+
+    // Get the filtered results or all records
+    $chargingData = $query->get();
+
+    // Check if data exists
+    if ($chargingData->isEmpty()) {
+        return response()->json([
+            'status' => 404,
+            'message' => 'No charging history found for the given criteria.',
+            'data' => [],
+        ]);
+    }
+
+    return response()->json([
+        'status' => 200,
+        'message' => 'Charging history retrieved successfully.',
+        'data' => $chargingData,
+    ]);
+}
+
     
 }

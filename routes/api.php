@@ -38,6 +38,8 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
     Route::get('/ups-data/{id}', [Api\UpsDataController::class, 'show']);
 
     Route::post('/device-charging', [Api\UpsDataController::class, 'devicechargingStore']);
+    Route::get('/history', [Api\UpsDataController::class, 'history']);
+
 
 
     Route::post('/find/unique-id', [Api\UpsDataController::class, 'findUniqueId']);
