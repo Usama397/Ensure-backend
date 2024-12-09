@@ -39,7 +39,7 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 
     
     Route::get('/history', [Api\UpsDataController::class, 'history']);
-    Route::get('/ups-specifications', [Api\UpsDataController::class, 'userSpecifications']);
+    Route::get('/ups-specifications', [Api\UpsDataController::class, 'upsSpecifications']);
 
 
 
