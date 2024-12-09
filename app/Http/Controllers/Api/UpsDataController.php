@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\UpsData;
 use App\Models\UpsSpecification;
+use App\Models\DeviceCharging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -265,4 +266,86 @@ class UpsDataController extends Controller
         ], 200);
     }
 
+    public function devicechargingStore(Request $request)
+    {
+        $request->validate([
+            'serial_key' => 'required|string',
+            'charging_start_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_end_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_status' => 'required|string',
+            'event' => 'required|string',
+            'specific_day' => 'required|date_format:Y-m-d',
+        ]);
+    
+        // Check if the record already exists for the given serial_key and specific_day
+        $chargingData = DeviceCharging::where('serial_key', $request->serial_key)
+            ->where('specific_day', $request->specific_day)
+            ->first();
+    
+        if ($chargingData) {
+            // Update existing record
+            $chargingData->update([
+                'charging_start_time' => $request->charging_start_time,
+                'charging_end_time' => $request->charging_end_time,
+                'charging_status' => $request->charging_status,
+                'event' => $request->event,
+            ]);
+    
+            return response()->json([
+                'status' => 200,
+                'message' => 'Charging data updated successfully.',
+                'data' => $chargingData,
+            ]);
+        } else {
+            // Create a new record
+            $chargingData = DeviceCharging::create([
+                'serial_key' => $request->serial_key,
+                'charging_start_time' => $request->charging_start_time,
+                'charging_end_time' => $request->charging_end_time,
+                'charging_status' => $request->charging_status,
+                'event' => $request->event,
+                'specific_day' => $request->specific_day,
+            ]);
+    
+            return response()->json([
+                'status' => 201,
+                'message' => 'Charging data created successfully.',
+                'data' => $chargingData,
+            ]);
+        }
+    }
+
+    public function history(Request $request)
+{
+    // Retrieve optional filters from query parameters
+    $query = DeviceCharging::query();
+
+    if ($request->has('serial_key')) {
+        $query->where('serial_key', $request->serial_key);
+    }
+
+    if ($request->has('specific_day')) {
+        $query->where('specific_day', $request->specific_day);
+    }
+
+    // Get the filtered results or all records
+    $chargingData = $query->get();
+
+    // Check if data exists
+    if ($chargingData->isEmpty()) {
+        return response()->json([
+            'status' => 404,
+            'message' => 'No charging history found for the given criteria.',
+            'data' => [],
+        ]);
+    }
+
+    return response()->json([
+        'status' => 200,
+        'message' => 'Charging history retrieved successfully.',
+        'data' => $chargingData,
+    ]);
+}
+
+    
 }
