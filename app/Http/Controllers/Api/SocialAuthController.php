@@ -70,16 +70,26 @@ class SocialAuthController extends Controller
             ->first();
 
         if (!$user) {
-            $user = User::create([
-                'name' => $providerUser->name,
-                'email' => $providerUser->email,
-                'provider' => $provider,
-                'provider_id' => $providerUser->id,
-                'password' => Hash::make(uniqid()),
-                'role' => 'user',
-                'phone_no' => $providerUser->phone_no ?? null,
-            ]);
+            $user = User::where('email', $providerUser->email)->first();
+
+            if ($user) {
+                $user->update([
+                    'provider' => $provider,
+                    'provider_id' => $providerUser->id,
+                ]);
+            } else {
+                $user = User::create([
+                    'name' => $providerUser->name,
+                    'email' => $providerUser->email,
+                    'provider' => $provider,
+                    'provider_id' => $providerUser->id,
+                    'password' => Hash::make(uniqid()),
+                    'role' => 'user',
+                    'phone_no' => $providerUser->phone_no ?? null,
+                ]);
+            }
         }
+
         return $user;
     }
 }
