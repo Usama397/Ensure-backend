@@ -266,6 +266,35 @@ class UpsDataController extends Controller
         ], 200);
     }
 
+    public function userSpecifications(Request $request)
+{
+    // Retrieve optional filters from query parameters
+    $query = UpsSpecification::query();
+
+    if ($request->has('unique_id')) {
+        $query->where('unique_id', $request->unique_id);
+    }
+
+    // Get the filtered results or all records
+    $upsSpecifications = $query->get();
+
+    // Check if data exists
+    if ($upsSpecifications->isEmpty()) {
+        return response()->json([
+            'status' => 404,
+            'message' => 'No UPS specifications found for the given criteria.',
+            'data' => [],
+        ]);
+    }
+
+    return response()->json([
+        'status' => 200,
+        'message' => 'UPS specifications retrieved successfully.',
+        'data' => $upsSpecifications,
+    ]);
+}
+
+
     public function devicechargingStore(Request $request)
     {
         $request->validate([
