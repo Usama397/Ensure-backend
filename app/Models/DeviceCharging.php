@@ -27,16 +27,6 @@ class DeviceCharging extends Model
         return $this->hasOne(UpsData::class, 'unique_id', 'serial_key');
     }
 
-    public function appUser()
-{
-    return $this->belongsTo(User::class, 'app_user_id');
-}
-
-public function user()
-{
-    return $this->belongsTo(User::class, 'user_id');
-}
-
 
 
 }
