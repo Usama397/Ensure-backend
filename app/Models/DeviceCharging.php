@@ -21,16 +21,12 @@ class DeviceCharging extends Model
         'user_id',
     ];
 
- // Automatically append custom attributes to the model's array/json form
- protected $appends = ['charging_duration'];
+    // Relationship with UpsData
+    public function upsData()
+    {
+        return $this->hasOne(UpsData::class, 'unique_id', 'serial_key');
+    }
 
- public function getChargingDurationAttribute()
- {
-     $start = strtotime($this->charging_start_time);
-     $end = strtotime($this->charging_end_time);
-     return gmdate('H:i:s', $end - $start);
- }
- 
     public function appUser()
 {
     return $this->belongsTo(User::class, 'app_user_id');
