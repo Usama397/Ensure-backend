@@ -120,6 +120,14 @@ class UpsDataController extends Controller
                 $upsSpecification->save();
             }
 
+             // Find the DeviceCharging record by serial_key
+            $deviceCharging = DeviceCharging::where('serial_key', $request->serial_key)->first();
+
+            if ($deviceCharging) {
+                $deviceCharging->app_user_id = auth()->id(); // Set the app_user_id to the authenticated user's ID
+                $deviceCharging->save(); // Save the changes
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => "User's unique found."

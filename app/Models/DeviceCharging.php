@@ -22,7 +22,7 @@ class DeviceCharging extends Model
     ];
 
     // Relationship with UpsData
-    public function upsData()
+    public function UpsData()
     {
         return $this->hasOne(UpsData::class, 'unique_id', 'serial_key');
     }
