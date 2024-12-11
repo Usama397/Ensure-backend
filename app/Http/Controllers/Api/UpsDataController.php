@@ -346,36 +346,58 @@ class UpsDataController extends Controller
     }
 
     public function history(Request $request)
-{
-    // Retrieve optional filters from query parameters
-    $query = DeviceCharging::query();
-
-    if ($request->has('serial_key')) {
-        $query->where('serial_key', $request->serial_key);
-    }
-
-    if ($request->has('specific_day')) {
-        $query->where('specific_day', $request->specific_day);
-    }
-
-    // Get the filtered results or all records
-    $chargingData = $query->get();
-
-    // Check if data exists
-    if ($chargingData->isEmpty()) {
+    {
+        $query = DeviceCharging::query();
+    
+        if ($request->has('serial_key')) {
+            $query->where('serial_key', $request->serial_key);
+        }
+    
+        if ($request->has('specific_day')) {
+            $query->where('specific_day', $request->specific_day);
+        }
+    
+        // Include related UPS data
+        $chargingData = $query->with('upsData')->get();
+    
+        if ($chargingData->isEmpty()) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'No charging history found for the given criteria.',
+                'data' => [],
+            ]);
+        }
+    
+        // Format the response to include specific UPS data and duration
+        $data = $chargingData->map(function ($item) {
+            // Calculate duration
+            $start = strtotime($item->charging_start_time);
+            $end = strtotime($item->charging_end_time);
+            $duration = gmdate('H:i:s', $end - $start);
+    
+            return [
+                'id' => $item->id,
+                'serial_key' => $item->serial_key,
+                'charging_start_time' => $item->charging_start_time,
+                'charging_end_time' => $item->charging_end_time,
+                'charging_status' => $item->charging_status,
+                'event' => $item->event,
+                'specific_day' => $item->specific_day,
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+                'charging_duration' => $duration, // Include calculated duration
+                'battery_voltage' => optional($item->upsData)->battery_voltage, // Fetch from UpsData
+                'output_voltage' => optional($item->upsData)->output_voltage,   // Fetch from UpsData
+            ];
+        });
+    
         return response()->json([
-            'status' => 404,
-            'message' => 'No charging history found for the given criteria.',
-            'data' => [],
+            'status' => 200,
+            'message' => 'Charging history retrieved successfully.',
+            'data' => $data,
         ]);
     }
-
-    return response()->json([
-        'status' => 200,
-        'message' => 'Charging history retrieved successfully.',
-        'data' => $chargingData,
-    ]);
-}
+    
 
     
 }

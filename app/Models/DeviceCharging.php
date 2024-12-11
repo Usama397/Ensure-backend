@@ -20,6 +20,17 @@ class DeviceCharging extends Model
         'app_user_id',
         'user_id',
     ];
+
+ // Automatically append custom attributes to the model's array/json form
+ protected $appends = ['charging_duration'];
+
+ public function getChargingDurationAttribute()
+ {
+     $start = strtotime($this->charging_start_time);
+     $end = strtotime($this->charging_end_time);
+     return gmdate('H:i:s', $end - $start);
+ }
+ 
     public function appUser()
 {
     return $this->belongsTo(User::class, 'app_user_id');
@@ -29,6 +40,8 @@ public function user()
 {
     return $this->belongsTo(User::class, 'user_id');
 }
+
+
 
 }
 
