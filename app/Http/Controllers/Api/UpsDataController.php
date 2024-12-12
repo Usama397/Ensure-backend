@@ -291,7 +291,7 @@ class UpsDataController extends Controller
         $upsSpecifications = $query->first();
     
         // Check if data exists
-        if ($upsSpecifications->isEmpty()) {
+        if (!$upsSpecifications) {
             return response()->json([
                 'status' => 404,
                 'message' => 'No UPS specifications found for the given criteria.',
