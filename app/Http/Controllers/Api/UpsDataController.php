@@ -360,7 +360,7 @@ class UpsDataController extends Controller
 
     public function history(Request $request)
     {
-        $query = DeviceCharging::query();
+        $query = DeviceCharging::query()->where('app_user_id', auth()->id());
     
         if ($request->has('serial_key')) {
             $query->where('serial_key', $request->serial_key);
