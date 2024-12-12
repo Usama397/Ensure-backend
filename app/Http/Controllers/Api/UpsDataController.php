@@ -371,8 +371,8 @@ class UpsDataController extends Controller
         }
     
         // Include related UPS data
-        $chargingData = $query->get();
-        dd($chargingData);
+        $chargingData = $query->with('upsData')->get();
+    
         if ($chargingData->isEmpty()) {
             return response()->json([
                 'status' => 404,
@@ -403,7 +403,7 @@ class UpsDataController extends Controller
                 'output_voltage' => optional($item->upsData)->output_voltage,   // Fetch from UpsData
             ];
         });
-        
+    
         return response()->json([
             'status' => 200,
             'message' => 'Charging history retrieved successfully.',
