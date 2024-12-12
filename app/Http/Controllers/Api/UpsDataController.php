@@ -371,7 +371,10 @@ class UpsDataController extends Controller
         }
     
         // Include related UPS data
-        $chargingData = $query->with('upsData')->get();
+        $chargingData = DeviceCharging::query()
+        ->where('specific_day', $request->specific_day)
+        ->with('upsData')
+        ->get();
     
         if ($chargingData->isEmpty()) {
             return response()->json([
