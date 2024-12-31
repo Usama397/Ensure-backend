@@ -127,7 +127,7 @@ class UpsDataController extends Controller
                 $upsSpecification->app_user_id = auth()->id();
                 $upsSpecification->save();
             }
-            
+
 
             return response()->json([
                 'status' => 'success',
@@ -279,17 +279,17 @@ class UpsDataController extends Controller
     {
         // Retrieve the current authenticated user's ID
         $userId = auth()->id();
-    
+
         // Query the UpsSpecification model and filter by the authenticated user
         $query = UpsSpecification::where('app_user_id', $userId);
-    
+
         if ($request->has('unique_id')) {
             $query->where('unique_id', $request->unique_id);
         }
-    
+
         // Get the filtered results
         $upsSpecifications = $query->first();
-    
+
         // Check if data exists
         if (!$upsSpecifications) {
             return response()->json([
@@ -298,18 +298,18 @@ class UpsDataController extends Controller
                 'data' => [],
             ]);
         }
-    
+
         return response()->json([
             'status' => 200,
             'message' => 'UPS specifications retrieved successfully.',
             'data' => $upsSpecifications,
         ]);
     }
-    
-    
 
 
-    public function devicechargingStore(Request $request)
+
+
+    public function devicechargingStoreBk(Request $request)
     {
         $request->validate([
             'serial_key' => 'required|string',
@@ -319,12 +319,12 @@ class UpsDataController extends Controller
             'event' => 'required|string',
             'specific_day' => 'required|date_format:Y-m-d',
         ]);
-    
+
         // Check if the record already exists for the given serial_key and specific_day
         $chargingData = DeviceCharging::where('serial_key', $request->serial_key)
             ->where('specific_day', $request->specific_day)
             ->first();
-    
+
         if ($chargingData) {
             // Update existing record
             $chargingData->update([
@@ -333,7 +333,7 @@ class UpsDataController extends Controller
                 'charging_status' => $request->charging_status,
                 'event' => $request->event,
             ]);
-    
+
             return response()->json([
                 'status' => 200,
                 'message' => 'Charging data updated successfully.',
@@ -349,7 +349,7 @@ class UpsDataController extends Controller
                 'event' => $request->event,
                 'specific_day' => $request->specific_day,
             ]);
-    
+
             return response()->json([
                 'status' => 201,
                 'message' => 'Charging data created successfully.',
@@ -361,21 +361,21 @@ class UpsDataController extends Controller
     public function history(Request $request)
     {
         $query = DeviceCharging::query()->where('app_user_id', auth()->id());
-    
+
         if ($request->has('serial_key')) {
             $query->where('serial_key', $request->serial_key);
         }
-    
+
         if ($request->has('specific_day')) {
             $query->where('specific_day', $request->specific_day);
         }
-    
+
         // Include related UPS data
         $chargingData = DeviceCharging::query()
         ->where('specific_day', $request->specific_day)
         ->with('upsData')
         ->get();
-    
+
         if ($chargingData->isEmpty()) {
             return response()->json([
                 'status' => 404,
@@ -383,14 +383,14 @@ class UpsDataController extends Controller
                 'data' => [],
             ]);
         }
-    
+
         // Format the response to include specific UPS data and duration
         $data = $chargingData->map(function ($item) {
             // Calculate duration
             $start = strtotime($item->charging_start_time);
             $end = strtotime($item->charging_end_time);
             $duration = gmdate('H:i:s', $end - $start);
-    
+
             return [
                 'id' => $item->id,
                 'serial_key' => $item->serial_key,
@@ -406,14 +406,42 @@ class UpsDataController extends Controller
                 'output_voltage' => optional($item->upsData)->output_voltage,   // Fetch from UpsData
             ];
         });
-    
+
         return response()->json([
             'status' => 200,
             'message' => 'Charging history retrieved successfully.',
             'data' => $data,
         ]);
     }
-    
 
-    
+
+    public function deviceChargingStore(Request $request)
+    {
+        $request->validate([
+            'serial_key' => 'required|string',
+            'charging_start_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_end_time' => 'required|date_format:Y-m-d H:i:s',
+            'charging_status' => 'required|string',
+            'event' => 'required|string',
+            'specific_day' => 'required|date_format:Y-m-d',
+        ]);
+
+        // Create a new record for each activity
+        $chargingData = DeviceCharging::create([
+            'serial_key' => $request->serial_key,
+            'charging_start_time' => $request->charging_start_time,
+            'charging_end_time' => $request->charging_end_time,
+            'charging_status' => $request->charging_status,
+            'event' => $request->event,
+            'specific_day' => $request->specific_day,
+        ]);
+
+        // Return success response
+        return response()->json([
+            'status' => 201,
+            'message' => 'Charging activity recorded successfully.',
+            'data' => $chargingData,
+        ]);
+    }
+
 }
