@@ -361,21 +361,57 @@ class UpsDataController extends Controller
     public function history(Request $request)
     {
         $query = DeviceCharging::query()->where('app_user_id', auth()->id());
-
+    
         if ($request->has('serial_key')) {
             $query->where('serial_key', $request->serial_key);
         }
-
+    
         if ($request->has('specific_day')) {
             $query->where('specific_day', $request->specific_day);
         }
-
+    
+        // Handle date range filters
+        if ($request->has('time_range')) {
+            $timeRange = $request->time_range;
+    
+            switch ($timeRange) {
+                case '1D': // Last 1 Day
+                    $query->whereDate('created_at', '>=', now()->subDay());
+                    break;
+                case '5D': // Last 5 Days
+                    $query->whereDate('created_at', '>=', now()->subDays(5));
+                    break;
+                case '1M': // Last 1 Month
+                    $query->whereDate('created_at', '>=', now()->subMonth());
+                    break;
+                case '3M': // Last 3 Months
+                    $query->whereDate('created_at', '>=', now()->subMonths(3));
+                    break;
+                case '6M': // Last 6 Months
+                    $query->whereDate('created_at', '>=', now()->subMonths(6));
+                    break;
+                case '9M': // Last 9 Months
+                    $query->whereDate('created_at', '>=', now()->subMonths(9));
+                    break;
+                case '1Y': // Last 1 Year
+                    $query->whereDate('created_at', '>=', now()->subYear());
+                    break;
+                case '5Y': // Last 5 Years
+                    $query->whereDate('created_at', '>=', now()->subYears(5));
+                    break;
+                case 'Max': // All time (no filter applied)
+                    break;
+                default:
+                    return response()->json([
+                        'status' => 400,
+                        'message' => 'Invalid time range selected.',
+                    ]);
+            }
+        }
+    
         // Include related UPS data
-        $chargingData = DeviceCharging::query()
-        ->where('specific_day', $request->specific_day)
-        ->with('upsData')
-        ->get();
-
+        $chargingData = $query->with('upsData')->get();
+    
         if ($chargingData->isEmpty()) {
             return response()->json([
                 'status' => 404,
@@ -383,14 +419,13 @@ class UpsDataController extends Controller
                 'data' => [],
             ]);
         }
-
-        // Format the response to include specific UPS data and duration
+    
+        // Format the response
         $data = $chargingData->map(function ($item) {
-            // Calculate duration
             $start = strtotime($item->charging_start_time);
             $end = strtotime($item->charging_end_time);
             $duration = gmdate('H:i:s', $end - $start);
-
+    
             return [
                 'id' => $item->id,
                 'serial_key' => $item->serial_key,
@@ -401,18 +436,19 @@ class UpsDataController extends Controller
                 'specific_day' => $item->specific_day,
                 'created_at' => $item->created_at,
                 'updated_at' => $item->updated_at,
-                'charging_duration' => $duration, // Include calculated duration
-                'battery_voltage' => optional($item->upsData)->battery_voltage, // Fetch from UpsData
-                'output_voltage' => optional($item->upsData)->output_voltage,   // Fetch from UpsData
+                'charging_duration' => $duration,
+                'battery_voltage' => optional($item->upsData)->battery_voltage,
+                'output_voltage' => optional($item->upsData)->output_voltage,
             ];
         });
-
+    
         return response()->json([
             'status' => 200,
             'message' => 'Charging history retrieved successfully.',
             'data' => $data,
         ]);
     }
+    
 
 
     public function deviceChargingStore(Request $request)
