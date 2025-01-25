@@ -375,32 +375,15 @@ public function history(Request $request)
         $timeRange = $request->time_range;
 
         switch ($timeRange) {
-            case '1D': // Last 1 Day
-                $query->whereDate('created_at', '>=', now()->subDay());
-                break;
-            case '5D': // Last 5 Days
-                $query->whereDate('created_at', '>=', now()->subDays(5));
-                break;
-            case '1M': // Last 1 Month
-                $query->whereDate('created_at', '>=', now()->subMonth());
-                break;
-            case '3M': // Last 3 Months
-                $query->whereDate('created_at', '>=', now()->subMonths(3));
-                break;
-            case '6M': // Last 6 Months
-                $query->whereDate('created_at', '>=', now()->subMonths(6));
-                break;
-            case '9M': // Last 9 Months
-                $query->whereDate('created_at', '>=', now()->subMonths(9));
-                break;
-            case '1Y': // Last 1 Year
-                $query->whereDate('created_at', '>=', now()->subYear());
-                break;
-            case '5Y': // Last 5 Years
-                $query->whereDate('created_at', '>=', now()->subYears(5));
-                break;
-            case 'Max': // All time (no filter applied)
-                break;
+            case '1D': $query->whereDate('created_at', '>=', now()->subDay()); break;
+            case '5D': $query->whereDate('created_at', '>=', now()->subDays(5)); break;
+            case '1M': $query->whereDate('created_at', '>=', now()->subMonth()); break;
+            case '3M': $query->whereDate('created_at', '>=', now()->subMonths(3)); break;
+            case '6M': $query->whereDate('created_at', '>=', now()->subMonths(6)); break;
+            case '9M': $query->whereDate('created_at', '>=', now()->subMonths(9)); break;
+            case '1Y': $query->whereDate('created_at', '>=', now()->subYear()); break;
+            case '5Y': $query->whereDate('created_at', '>=', now()->subYears(5)); break;
+            case 'Max': break; // No filter
             default:
                 return response()->json([
                     'status' => 400,
@@ -409,7 +392,6 @@ public function history(Request $request)
         }
     }
 
-    // Include related UPS data
     $chargingData = $query->with('upsData')->get();
 
     if ($chargingData->isEmpty()) {
@@ -420,7 +402,7 @@ public function history(Request $request)
         ]);
     }
 
-    // Prepare data for graph mapping
+    // Prepare graph data with event encoding
     $timeSlots = [
         '08AM' => 8,
         '01PM' => 13,
@@ -439,43 +421,30 @@ public function history(Request $request)
 
         $averageBattery = $slotData->avg('upsData.battery_voltage') ?? 0;
         $averageOutput = $slotData->avg('upsData.output_voltage') ?? 0;
+        $eventValue = $slotData->map(function ($item) {
+            return match ($item->event) {
+                'Charging' => 1,
+                'Discharging' => 2,
+                'Standby' => 3,
+                default => 0,
+            };
+        })->average() ?? 0;
 
         $graphData[] = [
             'time_slot' => $label,
             'average_battery_voltage' => round($averageBattery, 2),
             'average_output_voltage' => round($averageOutput, 2),
+            'event_status' => round($eventValue, 0), // Encoded event value
         ];
     }
-
-    // Format the response
-    $data = $chargingData->map(function ($item) {
-        $start = strtotime($item->charging_start_time);
-        $end = strtotime($item->charging_end_time);
-        $duration = gmdate('H:i:s', $end - $start);
-
-        return [
-            'id' => $item->id,
-            'serial_key' => $item->serial_key,
-            'charging_start_time' => $item->charging_start_time,
-            'charging_end_time' => $item->charging_end_time,
-            'charging_status' => $item->charging_status,
-            'event' => $item->event,
-            'specific_day' => $item->specific_day,
-            'created_at' => $item->created_at,
-            'updated_at' => $item->updated_at,
-            'charging_duration' => $duration,
-            'battery_voltage' => optional($item->upsData)->battery_voltage,
-            'output_voltage' => optional($item->upsData)->output_voltage,
-        ];
-    });
 
     return response()->json([
         'status' => 200,
         'message' => 'Charging history retrieved successfully.',
-        'data' => $data,
         'graph_data' => $graphData,
     ]);
 }
+
 
     
 
