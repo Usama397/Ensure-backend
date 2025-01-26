@@ -362,15 +362,17 @@ class UpsDataController extends Controller
     {
         $query = DeviceCharging::query()->where('app_user_id', auth()->id());
     
+        // Check for serial_key parameter
         if ($request->has('serial_key')) {
             $query->where('serial_key', $request->serial_key);
         }
     
+        // Check for specific_day parameter
         if ($request->has('specific_day')) {
             $query->where('specific_day', $request->specific_day);
         }
     
-        // Handle date range filters
+        // Handle time_range filters
         if ($request->has('time_range')) {
             $timeRange = $request->time_range;
     
@@ -392,7 +394,8 @@ class UpsDataController extends Controller
             }
         }
     
-        $chargingData = $query->get();
+        // Fetch the charging data with upsData relationship
+        $chargingData = $query->with('upsData')->get();
     
         if ($chargingData->isEmpty()) {
             return response()->json([
@@ -409,16 +412,17 @@ class UpsDataController extends Controller
             $duration = gmdate('H:i:s', $end - $start);
     
             return [
-                'id' => $key + 1, // Generate an ID dynamically
-                'time_slot' => date('hA', $start), // Generate a time slot dynamically (e.g., 09AM)
+                'id' => $key + 1,
+                'time_slot' => date('hA', $start),
                 'serial_key' => $item->serial_key,
+                'specific_day' => $item->specific_day,
                 'charging_start_time' => $item->charging_start_time,
                 'charging_end_time' => $item->charging_end_time,
                 'charging_status' => $item->charging_status,
                 'event' => $item->event,
                 'charging_duration' => $duration,
-                'average_battery_voltage' => rand(12, 13) + (rand(0, 9) / 10), // Generate random battery voltage (12.0 to 13.0)
-                'average_output_voltage' => rand(110, 120), // Generate random output voltage (110 to 120)
+                'average_battery_voltage' => optional($item->UpsData)->battery_voltage ?? 0,
+                'average_output_voltage' => optional($item->UpsData)->output_voltage ?? 0,
                 'event_status' => match ($item->event) {
                     'Charging' => 1,
                     'Discharging' => 2,
@@ -434,6 +438,8 @@ class UpsDataController extends Controller
             'graph_data' => $graphData,
         ]);
     }
+    
+    
     
     
     
