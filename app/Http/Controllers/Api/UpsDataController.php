@@ -107,9 +107,20 @@ class UpsDataController extends Controller
             'unique_id' => 'required|string',
         ]);
 
-        // Find all DeviceCharging records by unique_id (mapped to serial_key)
-        $affectedRows = DeviceCharging::where('serial_key', $request->unique_id)
-            ->update(['app_user_id' => auth()->id()]); // Set app_user_id for all matching records
+        do {
+            // Update all matching records where app_user_id is NULL
+            $affectedRows = DeviceCharging::where('serial_key', $request->unique_id)
+                ->whereNull('app_user_id') // Only update records with no app_user_id set
+                ->update(['app_user_id' => auth()->id()]);
+        
+            // Exit the loop if records were found and updated
+            if ($affectedRows > 0) {
+                break;
+            }
+        
+            // Wait for a short interval before checking again
+            sleep(5); // Adjust interval as needed
+        } while (true);
 
 
         $upsData = UpsData::where('unique_id', $request->unique_id)->first();
