@@ -106,40 +106,53 @@ class UpsDataController extends Controller
         $request->validate([
             'unique_id' => 'required|string',
         ]);
-
+    
+        $authUserId = auth()->id(); // Store the authenticated user's ID
+    
+        // Retrieve the first record matching the unique_id
+        $existingRecord = DeviceCharging::where('serial_key', $request->unique_id)
+            ->whereNotNull('app_user_id') // Find an already updated record
+            ->first();
+    
+        if ($existingRecord) {
+            $appUserIdToSet = $existingRecord->app_user_id; // Use the app_user_id from the existing record
+        } else {
+            $appUserIdToSet = $authUserId; // Default to the current user's ID
+        }
+    
         do {
             // Update all matching records where app_user_id is NULL
             $affectedRows = DeviceCharging::where('serial_key', $request->unique_id)
                 ->whereNull('app_user_id') // Only update records with no app_user_id set
-                ->update(['app_user_id' => auth()->id()]);
-        
+                ->update(['app_user_id' => $appUserIdToSet]);
+    
             // Exit the loop if records were found and updated
             if ($affectedRows > 0) {
                 break;
             }
-        
+    
             // Wait for a short interval before checking again
             sleep(5); // Adjust interval as needed
         } while (true);
-
-
+    
+        // Update related UPS data
         $upsData = UpsData::where('unique_id', $request->unique_id)->first();
-
+    
         if ($upsData) {
-            $upsData->app_user_id = auth()->id();
+            $upsData->app_user_id = $appUserIdToSet; // Use the same app_user_id
             $upsData->save();
-
+    
+            // Update UPS Specification data
             $upsSpecification = UpsSpecification::where('unique_id', $request->unique_id)->first();
-
+    
             if ($upsSpecification) {
-                $upsSpecification->app_user_id = auth()->id();
+                $upsSpecification->app_user_id = $appUserIdToSet; // Use the same app_user_id
                 $upsSpecification->save();
             }
-
-
+    
             return response()->json([
                 'status' => 'success',
-                'message' => "User's unique found."
+                'message' => "User's unique ID connection established and updated."
             ], 200);
         } else {
             return response()->json([
@@ -148,6 +161,7 @@ class UpsDataController extends Controller
             ], 404);
         }
     }
+    
 
     public function chargingStatus(Request $request)
     {
