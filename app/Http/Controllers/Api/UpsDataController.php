@@ -107,13 +107,10 @@ class UpsDataController extends Controller
             'unique_id' => 'required|string',
         ]);
 
-         // Find the DeviceCharging record by unique_id (mapped to serial_key)
-        $deviceCharging = DeviceCharging::where('serial_key', $request->unique_id)->first();
+        // Find all DeviceCharging records by unique_id (mapped to serial_key)
+        $affectedRows = DeviceCharging::where('serial_key', $request->unique_id)
+            ->update(['app_user_id' => auth()->id()]); // Set app_user_id for all matching records
 
-        if ($deviceCharging) {
-            $deviceCharging->app_user_id = auth()->id(); // Set the app_user_id to the authenticated user's ID
-            $deviceCharging->save(); // Save the changes
-        }
 
         $upsData = UpsData::where('unique_id', $request->unique_id)->first();
 
