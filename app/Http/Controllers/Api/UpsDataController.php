@@ -398,7 +398,7 @@ class UpsDataController extends Controller
             return response()->json([
                 'status' => 404,
                 'message' => 'No charging history found for the given criteria.',
-                'data' => [],
+                'graph_data' => [],
             ]);
         }
     
@@ -419,67 +419,39 @@ class UpsDataController extends Controller
                 return $startHour == $hour;
             });
     
-            $averageBattery = $slotData->avg('upsData.battery_voltage') ?? 0;
-            $averageOutput = $slotData->avg('upsData.output_voltage') ?? 0;
-            $eventValue = $slotData->map(function ($item) {
-                return match ($item->event) {
-                    'Charging' => 1,
-                    'Discharging' => 2,
-                    'Standby' => 3,
-                    default => 0,
-                };
-            })->average() ?? 0;
-    
-            $eventDetails = $slotData->map(function ($item) {
+            foreach ($slotData as $item) {
                 $start = strtotime($item->charging_start_time);
                 $end = strtotime($item->charging_end_time);
                 $duration = gmdate('H:i:s', $end - $start);
     
-                return [
+                $graphData[] = [
+                    'id' => $item->id,
+                    'time_slot' => $label,
+                    'serial_key' => $item->serial_key,
+                    'charging_start_time' => $item->charging_start_time,
+                    'charging_end_time' => $item->charging_end_time,
+                    'charging_status' => $item->charging_status,
                     'event' => $item->event,
-                    'start_time' => $item->charging_start_time,
-                    'duration' => $duration,
+                    'charging_duration' => $duration,
+                    'average_battery_voltage' => optional($item->upsData)->battery_voltage ?? 0,
+                    'average_output_voltage' => optional($item->upsData)->output_voltage ?? 0,
+                    'event_status' => match ($item->event) {
+                        'Charging' => 1,
+                        'Discharging' => 2,
+                        'Standby' => 3,
+                        default => 0,
+                    },
                 ];
-            });
-    
-            $graphData[] = [
-                'time_slot' => $label,
-                'average_battery_voltage' => round($averageBattery, 2),
-                'average_output_voltage' => round($averageOutput, 2),
-                'event_status' => round($eventValue, 0), // Encoded event value
-                'details' => $eventDetails->toArray(), // Include all event details
-            ];
+            }
         }
-    
-        // Include raw data with duration, start time, and events
-        $data = $chargingData->map(function ($item) {
-            $start = strtotime($item->charging_start_time);
-            $end = strtotime($item->charging_end_time);
-            $duration = gmdate('H:i:s', $end - $start);
-    
-            return [
-                'id' => $item->id,
-                'serial_key' => $item->serial_key,
-                'charging_start_time' => $item->charging_start_time,
-                'charging_end_time' => $item->charging_end_time,
-                'charging_status' => $item->charging_status,
-                'event' => $item->event,
-                'specific_day' => $item->specific_day,
-                'created_at' => $item->created_at,
-                'updated_at' => $item->updated_at,
-                'charging_duration' => $duration,
-                'battery_voltage' => optional($item->upsData)->battery_voltage,
-                'output_voltage' => optional($item->upsData)->output_voltage,
-            ];
-        });
     
         return response()->json([
             'status' => 200,
             'message' => 'Charging history retrieved successfully.',
             'graph_data' => $graphData,
-            'raw_data' => $data, // Include raw data for completeness
         ]);
     }
+    
     
 
 
