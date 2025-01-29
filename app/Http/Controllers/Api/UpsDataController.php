@@ -160,6 +160,7 @@ class UpsDataController extends Controller
         $inputVoltage = $upsData->input_voltage;
         $outputCurrent = $upsData->output_current;
         $percentage = $upsData->percentage ?? 0;
+        
 
         // Calculate percentage if not available
         $percentage = $upsData->percentage ?? $this->calculatePercentage($batteryVoltage);
@@ -189,6 +190,7 @@ class UpsDataController extends Controller
             'soc' => round($soc, 3),
             'percentage' => round($percentage, 2) . ' %',
             'charging' => $charging,
+            'output_current' => $outputCurrent,
         ]);
     }
 
