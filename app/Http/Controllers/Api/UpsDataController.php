@@ -151,23 +151,26 @@ class UpsDataController extends Controller
             return response()->json(['error' => 'No data found for the specified user.'], 404);
         }
     
+        // Extract relevant parameters
         $batteryVoltage = $upsData->battery_voltage;
         $inputVoltage = $upsData->input_voltage;
         $outputCurrent = $upsData->output_current;
+        $utilityFail = $upsData->utility_fail;
+        $batteryLow = $upsData->battery_low;
         $percentage = $upsData->percentage ?? $this->calculatePercentage($batteryVoltage);
     
         // Determine UPS status
-        if ($inputVoltage > 0 && $outputCurrent > 0) {
-            $status = 'Charging';
-        } elseif ($inputVoltage == 0 && $outputCurrent > 0) {
-            $status = 'Discharging';
-        } elseif ($inputVoltage > 0 && $outputCurrent == 0) {
-            $status = 'Standby';
+        if (!$utilityFail && $outputCurrent > 0) {
+            $status = 'Charging'; // Grid power is active and charging the battery
+        } elseif ($utilityFail && $outputCurrent > 0) {
+            $status = 'Discharging'; // Grid power failed, UPS is using battery
+        } elseif (!$utilityFail && $outputCurrent == 0 && $percentage >= 100) {
+            $status = 'Standby'; // Grid power is active, no load, battery fully charged
         } else {
-            $status = 'Unknown'; // Catch-all for unexpected states
+            $status = 'Unknown';
         }
     
-        // SOC Calculation
+        // Calculate SOC
         if ($status === 'Charging') {
             $soc = 0.4631 * $batteryVoltage - 5.468;
         } else {
@@ -193,19 +196,19 @@ class UpsDataController extends Controller
             'percentage' => round($percentage, 2) . ' %',
             'charging' => $status === 'Charging',
             'output_current' => $outputCurrent,
-            'status' => $status, // New field for UPS status
+            'status' => $status, // UPS status
         ]);
     }
     
-
     private function calculatePercentage($voltage)
     {
-        $minVoltage = 11.0; // Minimum battery voltage (0% charge)
-        $maxVoltage = 13.5; // Maximum battery voltage (100% charge)
-
+        $minVoltage = 11.0; // 0% charge
+        $maxVoltage = 13.5; // 100% charge
+    
         return (($voltage - $minVoltage) / ($maxVoltage - $minVoltage)) * 100;
     }
-
+    
+    
     public function saveSettings(Request $request)
     {
         $request->validate([
