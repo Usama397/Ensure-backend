@@ -141,33 +141,34 @@ class UpsDataController extends Controller
     public function chargingStatus(Request $request)
     {
         $userId = Auth::id();
-        //$userId = 1;
-
-        /*if (!$userId) {
-            return response()->json(['error' => 'User not found.'], 404);
-        }*/
-
+    
         $upsData = UpsData::query()
             ->where('app_user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
-
+    
         if (!$upsData) {
             return response()->json(['error' => 'No data found for the specified user.'], 404);
         }
-
+    
         $batteryVoltage = $upsData->battery_voltage;
         $inputVoltage = $upsData->input_voltage;
         $outputCurrent = $upsData->output_current;
-        $percentage = $upsData->percentage ?? 0;
-        
-
-        // Calculate percentage if not available
         $percentage = $upsData->percentage ?? $this->calculatePercentage($batteryVoltage);
-
-        $charging = $inputVoltage > 0 && $outputCurrent > 0;
-
-        if ($charging) {
+    
+        // Determine UPS status
+        if ($inputVoltage > 0 && $outputCurrent > 0) {
+            $status = 'Charging';
+        } elseif ($inputVoltage == 0 && $outputCurrent > 0) {
+            $status = 'Discharging';
+        } elseif ($inputVoltage > 0 && $outputCurrent == 0) {
+            $status = 'Standby';
+        } else {
+            $status = 'Unknown'; // Catch-all for unexpected states
+        }
+    
+        // SOC Calculation
+        if ($status === 'Charging') {
             $soc = 0.4631 * $batteryVoltage - 5.468;
         } else {
             if ($percentage <= 0) {
@@ -176,7 +177,8 @@ class UpsDataController extends Controller
             $soc = (0.4631 * pow($batteryVoltage, 2) - 5.1578 * $batteryVoltage + 34.737 * $percentage) /
                 ($batteryVoltage + 0.25474 * $percentage);
         }
-
+    
+        // Clamp SOC
         if ($soc >= 1.0) {
             $soc = 1.0;
         } elseif ($soc <= 0.0) {
@@ -185,14 +187,16 @@ class UpsDataController extends Controller
             $octiles = [1.0, 0.875, 0.750, 0.675, 0.500, 0.375, 0.250, 0.125, 0.0];
             $soc = collect($octiles)->sortBy(fn($octile) => abs($octile - $soc))->first();
         }
-
+    
         return response()->json([
             'soc' => round($soc, 3),
             'percentage' => round($percentage, 2) . ' %',
-            'charging' => $charging,
+            'charging' => $status === 'Charging',
             'output_current' => $outputCurrent,
+            'status' => $status, // New field for UPS status
         ]);
     }
+    
 
     private function calculatePercentage($voltage)
     {
