@@ -10,6 +10,8 @@ use App\Models\DeviceCharging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Models\UpsDataLog;
+
 class UpsDataController extends Controller
 {
     // Fetch all UPS data, optionally filtered by user or date range
@@ -49,11 +51,6 @@ class UpsDataController extends Controller
             'data' => $upsData,
         ]);
     }
-
-    use App\Models\UpsData;
-    use App\Models\UpsDataLog;
-    use Illuminate\Http\Request;
-    use Illuminate\Support\Facades\Validator;
     
     public function store(Request $request)
     {
