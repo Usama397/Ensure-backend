@@ -50,6 +50,11 @@ class UpsDataController extends Controller
         ]);
     }
 
+    use App\Models\UpsData;
+    use App\Models\UpsDataLog;
+    use Illuminate\Http\Request;
+    use Illuminate\Support\Facades\Validator;
+    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -71,7 +76,7 @@ class UpsDataController extends Controller
             'shutdown_active' => 'required|boolean',
             'beeper_on' => 'required|boolean',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json([
                 'status' => 400,
@@ -79,12 +84,23 @@ class UpsDataController extends Controller
                 'errors' => $validator->errors(),
             ], 400);
         }
-
-        $upsData = UpsData::where('unique_id', $request->unique_id)->where('user_id', $request->user_id)->first();
-
+    
+        $upsData = UpsData::where('unique_id', $request->unique_id)
+            ->where('user_id', $request->user_id)
+            ->first();
+    
         if ($upsData) {
             // Update existing record
             $upsData->update($validator->validated());
+    
+            // Log the update
+            UpsDataLog::create([
+                'ups_data_id' => $upsData->id,
+                'user_id' => $request->user_id,
+                'data' => json_encode($validator->validated()), // Store the updated data
+                'action' => 'updated',
+            ]);
+    
             return response()->json([
                 'status' => 200,
                 'message' => 'UPS data updated successfully',
@@ -93,6 +109,15 @@ class UpsDataController extends Controller
         } else {
             // Create new record
             $upsData = UpsData::create($validator->validated());
+    
+            // Log the creation
+            UpsDataLog::create([
+                'ups_data_id' => $upsData->id,
+                'user_id' => $request->user_id,
+                'data' => json_encode($validator->validated()), // Store the new data
+                'action' => 'created',
+            ]);
+    
             return response()->json([
                 'status' => 201,
                 'message' => 'UPS data created successfully',
@@ -100,6 +125,7 @@ class UpsDataController extends Controller
             ]);
         }
     }
+    
 
     public function findUniqueId(Request $request)
     {
