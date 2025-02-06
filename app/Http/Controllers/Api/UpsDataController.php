@@ -167,62 +167,60 @@ class UpsDataController extends Controller
         $userId = Auth::id();
     
         $upsData = UpsData::query()
-            ->where('app_user_id', $userId)
+            ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
     
         if (!$upsData) {
-            return response()->json(['error' => 'No data found for the specified user.'], 404);
+            return response()->json(['error' => 'No UPS data found for this user.'], 404);
         }
     
-        // Extract relevant parameters
+        // Retrieve necessary values
         $batteryVoltage = $upsData->battery_voltage;
-        $inputVoltage = $upsData->input_voltage;
         $outputCurrent = $upsData->output_current;
-        $utilityFail = $upsData->utility_fail;
-        $batteryLow = $upsData->battery_low;
-        $percentage = $upsData->percentage ?? $this->calculatePercentage($batteryVoltage);
+        $chargingStatus = $upsData->charging_status; // 1 = Charging, 0 = Not Charging
+        $percentage = $upsData->percentage ?? 0;
     
-        // Determine UPS status
-        if (!$utilityFail && $outputCurrent > 0) {
-            $status = 'Charging'; // Grid power is active and charging the battery
-        } elseif ($utilityFail && $outputCurrent > 0) {
-            $status = 'Discharging'; // Grid power failed, UPS is using battery
-        } elseif (!$utilityFail && $outputCurrent == 0 && $percentage >= 100) {
-            $status = 'Standby'; // Grid power is active, no load, battery fully charged
+        // Determine UPS Mode
+        if ($chargingStatus == 1) {
+            $mode = 'Charging';
+        } elseif ($chargingStatus == 0 && $outputCurrent > 0) {
+            $mode = 'Discharging';
         } else {
-            $status = 'Unknown';
+            $mode = 'Standby';
         }
     
-        // Calculate SOC
-        if ($status === 'Charging') {
+        // Calculate SOC based on mode
+        if ($mode == 'Charging') {
             $soc = 0.4631 * $batteryVoltage - 5.468;
-        } else {
+        } elseif ($mode == 'Discharging') {
             if ($percentage <= 0) {
-                return response()->json(['error' => 'Percentage required for discharging SOC calculation.'], 400);
+                return response()->json(['error' => 'Percentage required for Discharging SOC calculation.'], 400);
             }
             $soc = (0.4631 * pow($batteryVoltage, 2) - 5.1578 * $batteryVoltage + 34.737 * $percentage) /
                 ($batteryVoltage + 0.25474 * $percentage);
+        } else { // Standby Mode
+            $soc = $this->calculateStandbySOC($batteryVoltage);
         }
     
-        // Clamp SOC
-        if ($soc >= 1.0) {
-            $soc = 1.0;
-        } elseif ($soc <= 0.0) {
-            $soc = 0.0;
-        } else {
-            $octiles = [1.0, 0.875, 0.750, 0.675, 0.500, 0.375, 0.250, 0.125, 0.0];
-            $soc = collect($octiles)->sortBy(fn($octile) => abs($octile - $soc))->first();
-        }
+        // Ensure SOC is within range 0-1
+        $soc = max(0, min(1, $soc));
     
         return response()->json([
+            'mode' => $mode,
             'soc' => round($soc, 3),
-            'percentage' => round($percentage, 2) . ' %',
-            'charging' => $status === 'Charging',
+            'battery_voltage' => $batteryVoltage,
+            'charging_status' => $chargingStatus,
             'output_current' => $outputCurrent,
-            'status' => $status, // UPS status
+            'percentage' => round($percentage, 2) . ' %',
         ]);
     }
+
+    private function calculateStandbySOC($batteryVoltage)
+    {
+        // Placeholder formula - Client might provide a more refined equation
+        return max(0, min(1, 0.8 * ($batteryVoltage / 13.0))); // Normalizing to a 0-1 scale
+    }   
     
     private function calculatePercentage($voltage)
     {
