@@ -167,7 +167,7 @@ class UpsDataController extends Controller
         $userId = Auth::id();
     
         $upsData = UpsData::query()
-            ->where('app_user_id', $userId)
+            ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
     
@@ -179,7 +179,9 @@ class UpsDataController extends Controller
         $batteryVoltage = $upsData->battery_voltage;
         $outputCurrent = $upsData->output_current;
         $chargingStatus = $upsData->charging_status; // 1 = Charging, 0 = Not Charging
-        $percentage = $upsData->percentage ?? 0;
+    
+        // Calculate percentage based on battery voltage
+        $percentage = $this->calculatePercentage($batteryVoltage);
     
         // Determine UPS Mode
         if ($chargingStatus == 1) {
@@ -215,6 +217,7 @@ class UpsDataController extends Controller
             'percentage' => round($percentage, 2) . ' %',
         ]);
     }
+    
 
     private function calculateStandbySOC($batteryVoltage)
     {
@@ -224,11 +227,20 @@ class UpsDataController extends Controller
     
     private function calculatePercentage($voltage)
     {
-        $minVoltage = 11.0; // 0% charge
-        $maxVoltage = 13.5; // 100% charge
+        $minVoltage = 11.0;  // Represents 0% charge
+        $maxVoltage = 13.5;  // Represents 100% charge
+    
+        // Ensure voltage is within bounds
+        if ($voltage <= $minVoltage) {
+            return 0;
+        }
+        if ($voltage >= $maxVoltage) {
+            return 100;
+        }
     
         return (($voltage - $minVoltage) / ($maxVoltage - $minVoltage)) * 100;
     }
+    
     
     
     public function saveSettings(Request $request)
