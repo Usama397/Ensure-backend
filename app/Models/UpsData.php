@@ -27,7 +27,12 @@ class UpsData extends Model
         'ups_line_interactive',
         'test_in_progress',
         'shutdown_active',
-        'beeper_on'
+        'beeper_on',
+        'charging_status'
+    ];
+
+    protected $casts = [
+        'charging_status' => 'boolean', // Ensure boolean casting
     ];
 
 

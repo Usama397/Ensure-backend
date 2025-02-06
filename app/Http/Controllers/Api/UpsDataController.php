@@ -72,6 +72,7 @@ class UpsDataController extends Controller
             'test_in_progress' => 'required|boolean',
             'shutdown_active' => 'required|boolean',
             'beeper_on' => 'required|boolean',
+            'charging_status' => 'required|boolean',
         ]);
     
         if ($validator->fails()) {
