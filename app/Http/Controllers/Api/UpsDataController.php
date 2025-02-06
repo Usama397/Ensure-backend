@@ -167,7 +167,7 @@ class UpsDataController extends Controller
         $userId = Auth::id();
     
         $upsData = UpsData::query()
-            ->where('user_id', $userId)
+            ->where('app_user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->first();
     
