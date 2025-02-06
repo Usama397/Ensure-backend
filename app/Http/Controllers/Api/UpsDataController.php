@@ -209,10 +209,10 @@ class UpsDataController extends Controller
         $soc = max(0, min(1, $soc));
     
         return response()->json([
-            'mode' => $mode,
+            'status' => $mode,
             'soc' => round($soc, 3),
             'battery_voltage' => $batteryVoltage,
-            'charging_status' => $chargingStatus,
+            'charging' => $chargingStatus,
             'output_current' => $outputCurrent,
             'percentage' => round($percentage, 2) . ' %',
         ]);
