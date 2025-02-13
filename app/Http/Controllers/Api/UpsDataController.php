@@ -59,9 +59,10 @@ class UpsDataController extends Controller
 
 
 
+
     public function store(Request $request)
     {
-        // Log the incoming API request
+        // Log the incoming request
         Log::info('Incoming API Request:', ['data' => $request->all()]);
     
         $validator = Validator::make($request->all(), [
@@ -107,18 +108,25 @@ class UpsDataController extends Controller
     
         Cache::put($cacheKey, $validatedData, 10);
     
+        // Check if record exists
         $upsData = UpsData::where('unique_id', $request->unique_id)
             ->where('user_id', $request->user_id)
             ->first();
     
         if ($upsData) {
+            // Log before updating
+            Log::info('Updating existing UPS Data:', ['old_data' => $upsData->toArray(), 'new_data' => $validatedData]);
+    
             $upsData->update($validatedData);
             $action = 'updated';
         } else {
+            Log::info('Creating new UPS Data:', ['data' => $validatedData]);
+    
             $upsData = UpsData::create($validatedData);
             $action = 'created';
         }
     
+        // Log the action
         UpsDataLog::create([
             'ups_data_id' => $upsData->id,
             'user_id' => $request->user_id,
@@ -126,8 +134,8 @@ class UpsDataController extends Controller
             'action' => $action,
         ]);
     
-        // Log before dispatching to Google Sheets
-        Log::info('Dispatching Google Sheets Job', ['data' => $validatedData]);
+        // Ensure that updates are logged in Google Sheets
+        Log::info('Dispatching Google Sheets Job', ['data' => $validatedData, 'action' => $action]);
     
         AppendToGoogleSheetsJob::dispatch([
             now()->toDateTimeString(),
@@ -158,6 +166,7 @@ class UpsDataController extends Controller
             'data' => $upsData,
         ]);
     }
+    
     
     
     
