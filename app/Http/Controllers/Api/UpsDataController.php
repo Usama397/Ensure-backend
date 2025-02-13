@@ -62,42 +62,38 @@ class UpsDataController extends Controller
 
     public function store(Request $request)
     {
-        // Log the incoming request
-        Log::info('Incoming API Request:', ['data' => $request->all()]);
+        // Log the raw incoming request for debugging
+        Log::info('Raw Incoming API Request:', ['body' => $request->getContent()]);
+        
+        // Convert and validate input data
+        $validatedData = [
+            'unique_id' => $request->input('unique_id', 'ESP_UNKNOWN'),
+            'user_id' => $request->input('user_id', 0),
+            'input_voltage' => (float) $request->input('input_voltage', 0.0),
+            'input_fault_voltage' => (float) $request->input('input_fault_voltage', 0.0),
+            'output_voltage' => (float) $request->input('output_voltage', 0.0),
+            'output_current' => (int) $request->input('output_current', 0),
+            'output_frequency' => (float) $request->input('output_frequency', 50.0),
+            'battery_voltage' => (float) $request->input('battery_voltage', 0.0),
+            'temperature' => (float) $request->input('temperature', 0.0),
     
-        $validator = Validator::make($request->all(), [
-            'unique_id' => 'required|string',
-            'user_id' => 'required|integer',
-            'input_voltage' => 'required|numeric',
-            'input_fault_voltage' => 'required|numeric',
-            'output_voltage' => 'required|numeric',
-            'output_current' => 'required|numeric',
-            'output_frequency' => 'required|numeric',
-            'battery_voltage' => 'required|numeric',
-            'temperature' => 'required|numeric',
-            'utility_fail' => 'required|boolean',
-            'battery_low' => 'required|boolean',
-            'avr_normal' => 'required|boolean',
-            'ups_failed' => 'required|boolean',
-            'ups_line_interactive' => 'required|boolean',
-            'test_in_progress' => 'required|boolean',
-            'shutdown_active' => 'required|boolean',
-            'beeper_on' => 'required|boolean',
-            'charging_status' => 'required|boolean',
-        ]);
+            // Convert ESP boolean values ("0" or "1") into actual booleans
+            'utility_fail' => filter_var($request->input('utility_fail', false), FILTER_VALIDATE_BOOLEAN),
+            'battery_low' => filter_var($request->input('battery_low', false), FILTER_VALIDATE_BOOLEAN),
+            'avr_normal' => filter_var($request->input('avr_normal', true), FILTER_VALIDATE_BOOLEAN),
+            'ups_failed' => filter_var($request->input('ups_failed', false), FILTER_VALIDATE_BOOLEAN),
+            'ups_line_interactive' => filter_var($request->input('ups_line_interactive', false), FILTER_VALIDATE_BOOLEAN),
+            'test_in_progress' => filter_var($request->input('test_in_progress', false), FILTER_VALIDATE_BOOLEAN),
+            'shutdown_active' => filter_var($request->input('shutdown_active', false), FILTER_VALIDATE_BOOLEAN),
+            'beeper_on' => filter_var($request->input('beeper_on', false), FILTER_VALIDATE_BOOLEAN),
+            'charging_status' => filter_var($request->input('charging_status', false), FILTER_VALIDATE_BOOLEAN),
+        ];
     
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 400,
-                'message' => 'Validation Error',
-                'errors' => $validator->errors(),
-            ], 400);
-        }
-    
-        $validatedData = $validator->validated();
-        $cacheKey = "ups_data_{$request->unique_id}_{$request->user_id}";
+        // Cache Key for avoiding redundant writes
+        $cacheKey = "ups_data_{$validatedData['unique_id']}_{$validatedData['user_id']}";
         $cachedData = Cache::get($cacheKey);
     
+        // Skip update if incoming data is the same as the last recorded
         if ($cachedData && $cachedData == $validatedData) {
             Log::info('Skipping update: No change in data.');
             return response()->json([
@@ -106,22 +102,20 @@ class UpsDataController extends Controller
             ]);
         }
     
+        // Store in cache to prevent redundant updates for 10 seconds
         Cache::put($cacheKey, $validatedData, 10);
     
-        // Check if record exists
-        $upsData = UpsData::where('unique_id', $request->unique_id)
-            ->where('user_id', $request->user_id)
+        // Check if record already exists
+        $upsData = UpsData::where('unique_id', $validatedData['unique_id'])
+            ->where('user_id', $validatedData['user_id'])
             ->first();
     
         if ($upsData) {
-            // Log before updating
             Log::info('Updating existing UPS Data:', ['old_data' => $upsData->toArray(), 'new_data' => $validatedData]);
-    
             $upsData->update($validatedData);
             $action = 'updated';
         } else {
             Log::info('Creating new UPS Data:', ['data' => $validatedData]);
-    
             $upsData = UpsData::create($validatedData);
             $action = 'created';
         }
@@ -129,34 +123,34 @@ class UpsDataController extends Controller
         // Log the action
         UpsDataLog::create([
             'ups_data_id' => $upsData->id,
-            'user_id' => $request->user_id,
+            'user_id' => $validatedData['user_id'],
             'data' => json_encode($validatedData),
             'action' => $action,
         ]);
     
-        // Ensure that updates are logged in Google Sheets
+        // Dispatch Google Sheets update for BOTH "created" & "updated" records
         Log::info('Dispatching Google Sheets Job', ['data' => $validatedData, 'action' => $action]);
     
         AppendToGoogleSheetsJob::dispatch([
             now()->toDateTimeString(),
-            $request->unique_id,
-            $request->user_id,
-            $request->input_voltage,
-            $request->input_fault_voltage,
-            $request->output_voltage,
-            $request->output_current,
-            $request->output_frequency,
-            $request->battery_voltage,
-            $request->temperature,
-            $request->utility_fail,
-            $request->battery_low,
-            $request->avr_normal,
-            $request->ups_failed,
-            $request->ups_line_interactive,
-            $request->test_in_progress,
-            $request->shutdown_active,
-            $request->beeper_on,
-            $request->charging_status,
+            $validatedData['unique_id'],
+            $validatedData['user_id'],
+            $validatedData['input_voltage'],
+            $validatedData['input_fault_voltage'],
+            $validatedData['output_voltage'],
+            $validatedData['output_current'],
+            $validatedData['output_frequency'],
+            $validatedData['battery_voltage'],
+            $validatedData['temperature'],
+            $validatedData['utility_fail'],
+            $validatedData['battery_low'],
+            $validatedData['avr_normal'],
+            $validatedData['ups_failed'],
+            $validatedData['ups_line_interactive'],
+            $validatedData['test_in_progress'],
+            $validatedData['shutdown_active'],
+            $validatedData['beeper_on'],
+            $validatedData['charging_status'],
             $action
         ])->delay(now()->addSeconds(10));
     
@@ -166,6 +160,7 @@ class UpsDataController extends Controller
             'data' => $upsData,
         ]);
     }
+    
     
     
     
