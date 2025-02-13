@@ -64,11 +64,11 @@ class UpsDataController extends Controller
     {
         // Log the raw incoming request for debugging
         Log::info('Raw Incoming API Request:', ['body' => $request->getContent()]);
-        
-        // Convert and validate input data
+    
+        // Validate and normalize input data
         $validatedData = [
             'unique_id' => $request->input('unique_id', 'ESP_UNKNOWN'),
-            'user_id' => $request->input('user_id', 0),
+            'user_id' => $request->input('user_id', 0), // Default to 0 if missing
             'input_voltage' => (float) $request->input('input_voltage', 0.0),
             'input_fault_voltage' => (float) $request->input('input_fault_voltage', 0.0),
             'output_voltage' => (float) $request->input('output_voltage', 0.0),
@@ -76,8 +76,6 @@ class UpsDataController extends Controller
             'output_frequency' => (float) $request->input('output_frequency', 50.0),
             'battery_voltage' => (float) $request->input('battery_voltage', 0.0),
             'temperature' => (float) $request->input('temperature', 0.0),
-    
-            // Convert ESP boolean values ("0" or "1") into actual booleans
             'utility_fail' => filter_var($request->input('utility_fail', false), FILTER_VALIDATE_BOOLEAN),
             'battery_low' => filter_var($request->input('battery_low', false), FILTER_VALIDATE_BOOLEAN),
             'avr_normal' => filter_var($request->input('avr_normal', true), FILTER_VALIDATE_BOOLEAN),
@@ -89,11 +87,11 @@ class UpsDataController extends Controller
             'charging_status' => filter_var($request->input('charging_status', false), FILTER_VALIDATE_BOOLEAN),
         ];
     
-        // Cache Key for avoiding redundant writes
-        $cacheKey = "ups_data_{$validatedData['unique_id']}_{$validatedData['user_id']}";
+        // Cache Key for UPS (prevent redundant writes)
+        $cacheKey = "ups_data_{$validatedData['unique_id']}";
         $cachedData = Cache::get($cacheKey);
     
-        // Skip update if incoming data is the same as the last recorded
+        // Skip update if data has not changed
         if ($cachedData && $cachedData == $validatedData) {
             Log::info('Skipping update: No change in data.');
             return response()->json([
@@ -102,13 +100,11 @@ class UpsDataController extends Controller
             ]);
         }
     
-        // Store in cache to prevent redundant updates for 10 seconds
+        // Store in cache for 10 seconds to prevent redundant updates
         Cache::put($cacheKey, $validatedData, 10);
     
-        // Check if record already exists
-        $upsData = UpsData::where('unique_id', $validatedData['unique_id'])
-            ->where('user_id', $validatedData['user_id'])
-            ->first();
+        // Check if a record already exists (ignore `user_id`)
+        $upsData = UpsData::where('unique_id', $validatedData['unique_id'])->first();
     
         if ($upsData) {
             Log::info('Updating existing UPS Data:', ['old_data' => $upsData->toArray(), 'new_data' => $validatedData]);
@@ -120,39 +116,46 @@ class UpsDataController extends Controller
             $action = 'created';
         }
     
-        // Log the action
-        UpsDataLog::create([
-            'ups_data_id' => $upsData->id,
-            'user_id' => $validatedData['user_id'],
-            'data' => json_encode($validatedData),
-            'action' => $action,
-        ]);
+        // Try inserting log entry, but don't let failure affect Google Sheets
+        try {
+            UpsDataLog::create([
+                'ups_data_id' => $upsData->id,
+                'user_id' => $validatedData['user_id'], // Use `user_id` if available
+                'data' => json_encode($validatedData),
+                'action' => $action,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to insert into UpsDataLog: " . $e->getMessage());
+        }
     
-        // Dispatch Google Sheets update for BOTH "created" & "updated" records
-        Log::info('Dispatching Google Sheets Job', ['data' => $validatedData, 'action' => $action]);
+        // Ensure Google Sheets job always runs
+        try {
+            AppendToGoogleSheetsJob::dispatch([
+                now()->toDateTimeString(),
+                $validatedData['unique_id'],
+                $validatedData['input_voltage'],
+                $validatedData['input_fault_voltage'],
+                $validatedData['output_voltage'],
+                $validatedData['output_current'],
+                $validatedData['output_frequency'],
+                $validatedData['battery_voltage'],
+                $validatedData['temperature'],
+                $validatedData['utility_fail'],
+                $validatedData['battery_low'],
+                $validatedData['avr_normal'],
+                $validatedData['ups_failed'],
+                $validatedData['ups_line_interactive'],
+                $validatedData['test_in_progress'],
+                $validatedData['shutdown_active'],
+                $validatedData['beeper_on'],
+                $validatedData['charging_status'],
+                $action
+            ])->delay(now()->addSeconds(10));
     
-        AppendToGoogleSheetsJob::dispatch([
-            now()->toDateTimeString(),
-            $validatedData['unique_id'],
-            $validatedData['user_id'],
-            $validatedData['input_voltage'],
-            $validatedData['input_fault_voltage'],
-            $validatedData['output_voltage'],
-            $validatedData['output_current'],
-            $validatedData['output_frequency'],
-            $validatedData['battery_voltage'],
-            $validatedData['temperature'],
-            $validatedData['utility_fail'],
-            $validatedData['battery_low'],
-            $validatedData['avr_normal'],
-            $validatedData['ups_failed'],
-            $validatedData['ups_line_interactive'],
-            $validatedData['test_in_progress'],
-            $validatedData['shutdown_active'],
-            $validatedData['beeper_on'],
-            $validatedData['charging_status'],
-            $action
-        ])->delay(now()->addSeconds(10));
+            Log::info('Google Sheets Job Dispatched', ['data' => $validatedData]);
+        } catch (\Exception $e) {
+            Log::error("Google Sheets Dispatch Error: " . $e->getMessage());
+        }
     
         return response()->json([
             'status' => $upsData->wasRecentlyCreated ? 201 : 200,
