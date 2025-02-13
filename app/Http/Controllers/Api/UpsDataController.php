@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\UpsDataLog;
 use App\Services\GoogleSheetsService;
+use App\Jobs\AppendToGoogleSheetsJob;
+use Illuminate\Support\Facades\Cache;
 
 class UpsDataController extends Controller
 {
@@ -76,7 +78,7 @@ class UpsDataController extends Controller
             'beeper_on' => 'required|boolean',
             'charging_status' => 'required|boolean',
         ]);
-    
+
         if ($validator->fails()) {
             return response()->json([
                 'status' => 400,
@@ -84,30 +86,45 @@ class UpsDataController extends Controller
                 'errors' => $validator->errors(),
             ], 400);
         }
-    
+
+        $validatedData = $validator->validated();
+        $cacheKey = "ups_data_{$request->unique_id}_{$request->user_id}";
+        $cachedData = Cache::get($cacheKey);
+
+        // If data is identical to cached data, skip processing
+        if ($cachedData && $cachedData == $validatedData) {
+            return response()->json([
+                'status' => 200,
+                'message' => 'No changes detected, skipping update',
+            ]);
+        }
+
+        // Store in cache to prevent redundant updates
+        Cache::put($cacheKey, $validatedData, 10); // Store for 10 seconds
+
+        // Find existing UPS data
         $upsData = UpsData::where('unique_id', $request->unique_id)
             ->where('user_id', $request->user_id)
             ->first();
-    
+
         if ($upsData) {
-            $upsData->update($validator->validated());
+            $upsData->update($validatedData);
             $action = 'updated';
         } else {
-            $upsData = UpsData::create($validator->validated());
+            $upsData = UpsData::create($validatedData);
             $action = 'created';
         }
-    
+
         // Log the action
         UpsDataLog::create([
             'ups_data_id' => $upsData->id,
             'user_id' => $request->user_id,
-            'data' => json_encode($validator->validated()),
+            'data' => json_encode($validatedData),
             'action' => $action,
         ]);
-    
-        // Store data in Google Sheets
-        $sheetsService = new GoogleSheetsService();
-        $sheetsService->appendData([
+
+        // Queue Google Sheets API request instead of calling immediately
+        AppendToGoogleSheetsJob::dispatch([
             now()->toDateTimeString(),
             $request->unique_id,
             $request->user_id,
@@ -128,8 +145,8 @@ class UpsDataController extends Controller
             $request->beeper_on,
             $request->charging_status,
             $action
-        ]);
-    
+        ])->delay(now()->addSeconds(5));
+
         return response()->json([
             'status' => $upsData->wasRecentlyCreated ? 201 : 200,
             'message' => 'UPS data ' . $action . ' successfully',
