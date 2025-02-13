@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\UpsDataLog;
+use App\Services\GoogleSheetsService;
 
 class UpsDataController extends Controller
 {
@@ -52,6 +53,7 @@ class UpsDataController extends Controller
         ]);
     }
     
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -88,41 +90,53 @@ class UpsDataController extends Controller
             ->first();
     
         if ($upsData) {
-            // Update existing record
             $upsData->update($validator->validated());
-    
-            // Log the update
-            UpsDataLog::create([
-                'ups_data_id' => $upsData->id,
-                'user_id' => $request->user_id,
-                'data' => json_encode($validator->validated()), // Store the updated data
-                'action' => 'updated',
-            ]);
-    
-            return response()->json([
-                'status' => 200,
-                'message' => 'UPS data updated successfully',
-                'data' => $upsData,
-            ]);
+            $action = 'updated';
         } else {
-            // Create new record
             $upsData = UpsData::create($validator->validated());
-    
-            // Log the creation
-            UpsDataLog::create([
-                'ups_data_id' => $upsData->id,
-                'user_id' => $request->user_id,
-                'data' => json_encode($validator->validated()), // Store the new data
-                'action' => 'created',
-            ]);
-    
-            return response()->json([
-                'status' => 201,
-                'message' => 'UPS data created successfully',
-                'data' => $upsData,
-            ]);
+            $action = 'created';
         }
+    
+        // Log the action
+        UpsDataLog::create([
+            'ups_data_id' => $upsData->id,
+            'user_id' => $request->user_id,
+            'data' => json_encode($validator->validated()),
+            'action' => $action,
+        ]);
+    
+        // Store data in Google Sheets
+        $sheetsService = new GoogleSheetsService();
+        $sheetsService->appendData([
+            now()->toDateTimeString(),
+            $request->unique_id,
+            $request->user_id,
+            $request->input_voltage,
+            $request->input_fault_voltage,
+            $request->output_voltage,
+            $request->output_current,
+            $request->output_frequency,
+            $request->battery_voltage,
+            $request->temperature,
+            $request->utility_fail,
+            $request->battery_low,
+            $request->avr_normal,
+            $request->ups_failed,
+            $request->ups_line_interactive,
+            $request->test_in_progress,
+            $request->shutdown_active,
+            $request->beeper_on,
+            $request->charging_status,
+            $action
+        ]);
+    
+        return response()->json([
+            'status' => $upsData->wasRecentlyCreated ? 201 : 200,
+            'message' => 'UPS data ' . $action . ' successfully',
+            'data' => $upsData,
+        ]);
     }
+    
     
 
     public function findUniqueId(Request $request)
