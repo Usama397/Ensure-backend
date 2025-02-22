@@ -241,7 +241,7 @@ class UpsDataController extends Controller
 
     return response()->json([
         'status' => $mode,
-        'soc' => round($socPercentage, 3),
+        'soc' => $soc,
         'battery_voltage' => $batteryVoltage,
         'charging' => $chargingStatus,
         'output_current' => $outputCurrent,
