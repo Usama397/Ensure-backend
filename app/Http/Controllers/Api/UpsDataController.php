@@ -207,83 +207,54 @@ class UpsDataController extends Controller
     }
 
     public function chargingStatus(Request $request)
-    {
-        $userId = Auth::id();
-    
-        $upsData = UpsData::query()
-            ->where('app_user_id', $userId)
-            ->orderBy('created_at', 'desc')
-            ->first();
-    
-        if (!$upsData) {
-            return response()->json(['error' => 'No UPS data found for this user.'], 404);
-        }
-    
-        // Retrieve necessary values
-        $batteryVoltage = $upsData->battery_voltage;
-        $outputCurrent = $upsData->output_current;
-        $chargingStatus = $upsData->charging_status; // 1 = Charging, 0 = Not Charging
-    
-        // Calculate percentage based on battery voltage
-        $percentage = $this->calculatePercentage($batteryVoltage);
-    
-        // Determine UPS Mode
-        if ($chargingStatus == 1) {
-            $mode = 'Charging';
-        } elseif ($chargingStatus == 0 && $outputCurrent > 0) {
-            $mode = 'Discharging';
-        } else {
-            $mode = 'Standby';
-        }
-    
-        // Calculate SOC based on mode
-        if ($mode == 'Charging') {
-            $soc = 0.4631 * $batteryVoltage - 5.468;
-        } elseif ($mode == 'Discharging') {
-            if ($percentage <= 0) {
-                return response()->json(['error' => 'Percentage required for Discharging SOC calculation.'], 400);
-            }
-            $soc = (0.4631 * pow($batteryVoltage, 2) - 5.1578 * $batteryVoltage + 34.737 * $percentage) /
-                ($batteryVoltage + 0.25474 * $percentage);
-        } else { // Standby Mode
-            $soc = $this->calculateStandbySOC($batteryVoltage);
-        }
-    
-        // Ensure SOC is within range 0-1
-        $soc = max(0, min(1, $soc));
-    
-        return response()->json([
-            'status' => $mode,
-            'soc' => round($soc, 3),
-            'battery_voltage' => $batteryVoltage,
-            'charging' => $chargingStatus,
-            'output_current' => $outputCurrent,
-            'percentage' => round($percentage, 2) . ' %',
-        ]);
-    }
-    
+{
+    $userId = Auth::id();
 
-    private function calculateStandbySOC($batteryVoltage)
-    {
-        // Placeholder formula - Client might provide a more refined equation
-        return max(0, min(1, 0.8 * ($batteryVoltage / 13.0))); // Normalizing to a 0-1 scale
-    }   
-    
-    private function calculatePercentage($voltage)
-    {
-        $minVoltage = 11.0;  // Represents 0% charge
-        $maxVoltage = 13.5;  // Represents 100% charge
-    
-        // Ensure voltage is within bounds
-        if ($voltage <= $minVoltage) {
-            return 0;
-        }
-        if ($voltage >= $maxVoltage) {
-            return 100;
-        }
-    
-        return (($voltage - $minVoltage) / ($maxVoltage - $minVoltage)) * 100;
+    $upsData = UpsData::query()
+        ->where('app_user_id', $userId)
+        ->orderBy('created_at', 'desc')
+        ->first();
+
+    if (!$upsData) {
+        return response()->json(['error' => 'No UPS data found for this user.'], 404);
     }
+
+    // Retrieve necessary values
+    $batteryVoltage = $upsData->battery_voltage;
+    $outputCurrent = $upsData->output_current;
+    $chargingStatus = $upsData->charging_status; // 1 = Charging, 0 = Not Charging
+
+    // Determine UPS Mode
+    if ($chargingStatus == 1) {
+        $mode = 'Charging';
+    } elseif ($chargingStatus == 0 && $outputCurrent > 0) {
+        $mode = 'Discharging';
+    } else {
+        $mode = 'Standby';
+    }
+
+    // Calculate SOC using the given formula
+    $soc = $this->calculateSOC($batteryVoltage, $outputCurrent);
+
+    // Ensure SOC is within range 0-100
+    $socPercentage = max(0, min(100, $soc * 100));
+
+    return response()->json([
+        'status' => $mode,
+        'soc' => round($socPercentage, 3),
+        'battery_voltage' => $batteryVoltage,
+        'charging' => $chargingStatus,
+        'output_current' => $outputCurrent,
+        'percentage' => round($socPercentage, 2) . ' %',
+    ]);
+}
+
+private function calculateSOC($S, $Q)
+{
+    return 1.03 / (1 + exp(-3.37 * ($S + ($Q * 0.598) / $S - 12.26)));
+}
+
+    
     
     
     
