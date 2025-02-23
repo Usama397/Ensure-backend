@@ -227,9 +227,9 @@ class UpsDataController extends Controller
         $qqq = $upsData->output_current; // Assuming QQQ represents output current
     
         // Determine UPS Mode based on the given logic
-        if ($chargingInquiry == 'ACK' && $qqq == 0) {
+        if ($chargingInquiry == 1 && $qqq == 0) {
             $mode = 'Charging';
-        } elseif ($b7 == 1 && $chargingInquiry == 'NAK') {
+        } elseif ($b7 == 1 && $chargingInquiry == 0) {
             $mode = 'Discharging';
         } else {
             $mode = 'Standby';
