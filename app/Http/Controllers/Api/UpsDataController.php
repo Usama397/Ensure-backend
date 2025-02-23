@@ -226,20 +226,20 @@ class UpsDataController extends Controller
         $chargingInquiry = $upsData->charging_status;
         $qqq = $upsData->output_current; // Assuming QQQ represents output current
     
-        // Determine UPS Mode based on the given logic
-        if ($chargingInquiry == 1 && $qqq == 0) {
-            $mode = 'Charging';
-        } elseif ($b7 == 1 && $chargingInquiry == 0) {
-            $mode = 'Discharging';
-        } else {
-            $mode = 'Standby';
-        }
-    
         // Calculate SOC using the same formula for all modes
         $soc = $this->calculateSOC($batteryVoltage, $outputCurrent);
     
         // Ensure SOC is within range 0-100
         $socPercentage = max(0, min(100, $soc * 100));
+    
+        // Determine UPS Mode based strictly on the given conditions
+        if ($chargingInquiry == 1 && $qqq == 0) {
+            $mode = 'Charging';
+        } elseif ($b7 == 1 && $chargingInquiry == 0) {
+            $mode = 'Discharging';
+        } elseif ($socPercentage == 100 && $chargingInquiry == 0 && $b7 == 0) {
+            $mode = 'Standby';
+        }
     
         return response()->json([
             'status' => $mode,
@@ -255,6 +255,7 @@ class UpsDataController extends Controller
     {
         return 1.03 / (1 + exp(-3.37 * ($S + ($Q * 0.598) / $S - 12.26)));
     }
+    
     
 
     
