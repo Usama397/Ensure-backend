@@ -233,11 +233,11 @@ class UpsDataController extends Controller
         $socPercentage = max(0, min(100, $soc * 100));
     
         // Determine UPS Mode based strictly on the given conditions
-        if ($chargingInquiry == 1 && $qqq == 0) {
+        if ($chargingInquiry == 1 && $b7 == 0) {
             $mode = 'Charging';
         } elseif ($b7 == 1 && $chargingInquiry == 0) {
             $mode = 'Discharging';
-        } elseif ($socPercentage == 100 && $chargingInquiry == 0 && $b7 == 0) {
+        } elseif ($chargingInquiry == 0 && $b7 == 0) {
             $mode = 'Standby';
         }
     
