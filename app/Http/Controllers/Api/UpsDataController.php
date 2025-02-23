@@ -245,7 +245,7 @@ class UpsDataController extends Controller
         'battery_voltage' => $batteryVoltage,
         'charging' => $chargingStatus,
         'output_current' => $outputCurrent,
-        'percentage' => round($socPercentage, 2) . ' %',
+        'percentage' => intval($socPercentage),
     ]);
 }
 
