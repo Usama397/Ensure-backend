@@ -237,7 +237,7 @@ class UpsDataController extends Controller
             $mode = 'Charging';
         } elseif ($b7 == 1 && $chargingInquiry == 0) {
             $mode = 'Discharging';
-        } elseif ($socPercentage == 100 && $chargingInquiry == 0 && $b7 == 0) {
+        } elseif ($chargingInquiry == 0 && $b7 == 0) {
             $mode = 'Standby';
         }
     
