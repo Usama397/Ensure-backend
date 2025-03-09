@@ -16,28 +16,27 @@ class UpsRawDataController extends Controller
     {
         // Get the raw data from the request (plain text)
         $rawData = trim($request->getContent());
-        Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
+        // Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
 
         // Validate raw data is not empty
         if (empty($rawData)) {
-            Log::error('Received empty raw data');
+            // Log::error('Received empty raw data');
             return response()->json(['error' => 'Empty raw data'], 400);
         }
 
-        // Extract unique_id from raw data
-        $unique_id = explode(' ', $rawData)[0] ?? 'ESP_UNKNOWN';
+        // Split raw data to extract the unique ID
+        $parts = explode(' ', trim($rawData));
+        $uniqueId = $parts[0] ?? 'ESP_UNKNOWN';
 
-        // Check if the unique_id already exists in ups_raw table
-        $existingRawData = UpsRaw::where('raw_data', 'LIKE', $unique_id . '%')->first();
+        // Store raw data in ups_raw table (update if unique_id exists, else create new)
+        $existingUpsRaw = UpsRaw::where('unique_id', $uniqueId)->first();
 
-        if ($existingRawData) {
-            $existingRawData->update(['raw_data' => $rawData]);
-            $actionRaw = 'updated';
-            Log::info('Updated Existing Raw Data in ups_raw:', ['updated_data' => $rawData]);
+        if ($existingUpsRaw) {
+            $existingUpsRaw->update(['raw_data' => $rawData]);
+            // Log::info('Updated Raw Data in ups_raw:', ['id' => $existingUpsRaw->id]);
         } else {
-            $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
-            $actionRaw = 'created';
-            Log::info('Stored New Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+            $upsRaw = UpsRaw::create(['unique_id' => $uniqueId, 'raw_data' => $rawData]);
+            // Log::info('Stored New Raw Data in ups_raw:', ['id' => $upsRaw->id]);
         }
 
         // Extract and parse the raw data
@@ -55,19 +54,19 @@ class UpsRawDataController extends Controller
         if ($existingUpsData) {
             $existingUpsData->update($parsedData);
             $action = 'updated';
-            Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
+            // Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
         } else {
             UpsData::create($parsedData);
             $action = 'created';
-            Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
+            // Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
         }
 
-        // Forward parsed data to store API
+        // Forward parsed data to external API
         $response = Http::post($this->storeApiUrl, $parsedData);
 
         return response()->json([
             'status' => $action == 'created' ? 201 : 200,
-            'message' => "UPS data $action successfully, raw data $actionRaw successfully",
+            'message' => "UPS data $action successfully",
             'store_response' => $response->json()
         ]);
     }
@@ -76,15 +75,18 @@ class UpsRawDataController extends Controller
     {
         // Split the raw text into an array using spaces
         $parts = explode(' ', trim($rawData));
-    
+
         if (count($parts) < 10) { // Ensure at least unique_id, voltages, and status bits exist
-            Log::error('Invalid data format received', ['raw_data' => $rawData]);
+            // Log::error('Invalid data format received', ['raw_data' => $rawData]);
             return null;
         }
-    
-        // Extract status bits from the second last value
-        $statusBits = isset($parts[8]) ? decbin((int)$parts[8]) : '0';        // Convert to 8-bit binary string
-    
+
+        // Store status bits as an array (no conversion)
+        $statusBitsArray = isset($parts[8]) ? str_split($parts[8]) : array_fill(0, 8, '0');
+
+        // Log the extracted status bits
+        // Log::info('Extracted Status Bits:', ['original' => $parts[8], 'array' => $statusBitsArray]);
+
         return [
             'unique_id'             => $parts[0] ?? 'ESP_UNKNOWN',
             'input_voltage'         => isset($parts[1]) ? (float) $parts[1] : 0.0,
@@ -94,16 +96,15 @@ class UpsRawDataController extends Controller
             'output_frequency'      => isset($parts[5]) ? (float) $parts[5] : 50.0,  // Default to 50 Hz
             'battery_voltage'       => isset($parts[6]) ? (float) $parts[6] : 12.0,  // Default 12V
             'temperature'           => isset($parts[7]) ? (float) $parts[7] : 25.0,  // Default 25°C
-            'utility_fail'          => $statusBits[0] === '1',
-            'battery_low'           => $statusBits[1] === '1',
-            'avr_normal'            => $statusBits[2] === '0',  // 0 means NORMAL, 1 means AVR
-            'ups_failed'            => $statusBits[3] === '1',
-            'ups_line_interactive'  => $statusBits[4] === '1',
-            'test_in_progress'      => $statusBits[5] === '1',
-            'shutdown_active'       => $statusBits[6] === '1',
-            'beeper_on'             => $statusBits[7] === '1',
+            'utility_fail'          => $statusBitsArray[0] === '1', // Bit 7
+            'battery_low'           => $statusBitsArray[1] === '1', // Bit 6
+            'avr_normal'            => $statusBitsArray[2] === '0', // 0 means NORMAL, 1 means AVR
+            'ups_failed'            => $statusBitsArray[3] === '1', // Bit 4
+            'ups_line_interactive'  => $statusBitsArray[4] === '1', // Bit 3
+            'test_in_progress'      => $statusBitsArray[5] === '1', // Bit 2
+            'shutdown_active'       => $statusBitsArray[6] === '1', // Bit 1
+            'beeper_on'             => $statusBitsArray[7] === '1', // Bit 0
             'charging_status'       => isset($parts[9]) ? (bool) ($parts[9] == '1') : false // Last value for charging status
         ];
     }
-    
 }
