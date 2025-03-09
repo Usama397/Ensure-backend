@@ -94,14 +94,14 @@ class UpsRawDataController extends Controller
             'output_frequency'      => isset($parts[5]) ? (float) $parts[5] : 50.0,  // Default to 50 Hz
             'battery_voltage'       => isset($parts[6]) ? (float) $parts[6] : 12.0,  // Default 12V
             'temperature'           => isset($parts[7]) ? (float) $parts[7] : 25.0,  // Default 25°C
-            'utility_fail'          => $statusBitsArray[0] === '1', // Bit 7
-            'battery_low'           => $statusBitsArray[1] === '1', // Bit 6
-            'avr_normal'            => $statusBitsArray[2] === '0', // 0 means NORMAL, 1 means AVR
-            'ups_failed'            => $statusBitsArray[3] === '1', // Bit 4
-            'ups_line_interactive'  => $statusBitsArray[4] === '1', // Bit 3
-            'test_in_progress'      => $statusBitsArray[5] === '1', // Bit 2
-            'shutdown_active'       => $statusBitsArray[6] === '1', // Bit 1
-            'beeper_on'             => $statusBitsArray[7] === '1', // Bit 0
+            'utility_fail'          => $statusBitsArray[0], // Bit 7
+            'battery_low'           => $statusBitsArray[1] , // Bit 6
+            'avr_normal'            => $statusBitsArray[2], // 0 means NORMAL, 1 means AVR
+            'ups_failed'            => $statusBitsArray[3] , // Bit 4
+            'ups_line_interactive'  => $statusBitsArray[4] , // Bit 3
+            'test_in_progress'      => $statusBitsArray[5] , // Bit 2
+            'shutdown_active'       => $statusBitsArray[6] , // Bit 1
+            'beeper_on'             => $statusBitsArray[7] , // Bit 0
             'charging_status'       => isset($parts[9]) ? (bool) ($parts[9] == '1') : false // Last value for charging status
         ];
     }
