@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use App\Models\UpsData;
+use App\Models\UpsRaw;
 
 class UpsRawDataController extends Controller
 {
@@ -13,12 +14,21 @@ class UpsRawDataController extends Controller
 
     public function processRawData(Request $request)
     {
-        // Log the raw data received
+        // Get the raw data from the request
         $rawData = $request->getContent();
         Log::info('Received Raw UPS Data:', ['raw' => $rawData]);
 
-        // Parse the raw data
+        // Extract unique_id from raw data
         $parsedData = $this->parseRawData($rawData);
+        $uniqueId = $parsedData['unique_id'] ?? 'ESP_UNKNOWN';
+
+        // Store the raw data in the `ups_raw` table
+        UpsRaw::create([
+            'unique_id' => $uniqueId,
+            'raw_data' => $rawData
+        ]);
+
+        Log::info('Stored Raw UPS Data:', ['unique_id' => $uniqueId, 'raw' => $rawData]);
 
         // If parsing fails, return an error response
         if (!$parsedData) {
@@ -52,10 +62,8 @@ class UpsRawDataController extends Controller
 
     private function parseRawData($rawData)
     {
-        // Split the raw string into an array based on spaces
         $parts = explode(' ', trim($rawData));
 
-        // Ensure the raw data has at least the required number of fields
         if (count($parts) < 10) {
             return null;
         }
