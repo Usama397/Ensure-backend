@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api;
+use App\Http\Controllers\UpsRawDataController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,3 +58,4 @@ Route::middleware(['log.route', 'auth:sanctum'])->group(function () {
 Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
 Route::post('/ups-specifications/store', [Api\UpsDataController::class, 'userSpecificationsStore']);
 Route::post('/device-charging', [Api\UpsDataController::class, 'deviceChargingStore']);
+Route::post('/ups/raw-data', [UpsRawDataController::class, 'processRawData']);
