@@ -83,7 +83,7 @@ class UpsRawDataController extends Controller
         }
     
         // Extract status bits from the second last value
-        $statusBits = str_pad(decbin((int)$parts[8]), 8, "0", STR_PAD_LEFT); // Convert to 8-bit binary string
+        $statusBits = isset($parts[8]) ? decbin((int)$parts[8]) : '0';        // Convert to 8-bit binary string
     
         return [
             'unique_id'             => $parts[0] ?? 'ESP_UNKNOWN',
