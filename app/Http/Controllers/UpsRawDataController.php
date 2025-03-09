@@ -24,13 +24,20 @@ class UpsRawDataController extends Controller
             return response()->json(['error' => 'Empty raw data'], 400);
         }
 
-        // Store raw data in ups_raw table
-        try {
+        // Extract unique_id from raw data
+        $unique_id = explode(' ', $rawData)[0] ?? 'ESP_UNKNOWN';
+
+        // Check if the unique_id already exists in ups_raw table
+        $existingRawData = UpsRaw::where('raw_data', 'LIKE', $unique_id . '%')->first();
+
+        if ($existingRawData) {
+            $existingRawData->update(['raw_data' => $rawData]);
+            $actionRaw = 'updated';
+            Log::info('Updated Existing Raw Data in ups_raw:', ['updated_data' => $rawData]);
+        } else {
             $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
-            Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
-        } catch (\Exception $e) {
-            Log::error('Failed to store raw UPS data', ['error' => $e->getMessage()]);
-            return response()->json(['error' => 'Database insert failed'], 500);
+            $actionRaw = 'created';
+            Log::info('Stored New Raw Data in ups_raw:', ['id' => $upsRaw->id]);
         }
 
         // Extract and parse the raw data
@@ -60,7 +67,7 @@ class UpsRawDataController extends Controller
 
         return response()->json([
             'status' => $action == 'created' ? 201 : 200,
-            'message' => "UPS data $action successfully",
+            'message' => "UPS data $action successfully, raw data $actionRaw successfully",
             'store_response' => $response->json()
         ]);
     }
@@ -70,12 +77,12 @@ class UpsRawDataController extends Controller
         // Split the raw text into an array using spaces
         $parts = explode(' ', trim($rawData));
     
-        if (count($parts) < 9) { // Ensure at least unique_id, voltages, and status bits exist
+        if (count($parts) < 10) { // Ensure at least unique_id, voltages, and status bits exist
             Log::error('Invalid data format received', ['raw_data' => $rawData]);
             return null;
         }
     
-        // Extract status bits from the last part
+        // Extract status bits from the second last value
         $statusBits = str_pad(decbin((int)$parts[8]), 8, "0", STR_PAD_LEFT); // Convert to 8-bit binary string
     
         return [
@@ -95,9 +102,8 @@ class UpsRawDataController extends Controller
             'test_in_progress'      => $statusBits[5] === '1',
             'shutdown_active'       => $statusBits[6] === '1',
             'beeper_on'             => $statusBits[7] === '1',
-            'status_bits'           => $statusBits // Store raw status bits for debugging
+            'charging_status'       => isset($parts[9]) ? (bool) ($parts[9] == '1') : false // Last value for charging status
         ];
     }
-    
     
 }
