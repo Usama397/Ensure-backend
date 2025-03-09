@@ -25,12 +25,12 @@ class AppendToGoogleSheetsJob implements ShouldQueue
     public function handle()
     {
         try {
-            Log::info('Google Sheets Job Started', ['data' => $this->data]);
+            // Log::info('Google Sheets Job Started', ['data' => $this->data]);
     
             $sheetsService = new GoogleSheetsService();
             $sheetsService->appendData($this->data);
     
-            Log::info('Google Sheets Job Completed Successfully');
+            // Log::info('Google Sheets Job Completed Successfully');
         } catch (\Exception $e) {
             Log::error("Google Sheets API Error: " . $e->getMessage());
         }

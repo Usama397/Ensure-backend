@@ -63,7 +63,7 @@ class UpsDataController extends Controller
     public function store(Request $request)
     {
         // Log the raw incoming request for debugging
-        Log::info('Raw Incoming API Request:', ['body' => $request->getContent()]);
+        // Log::info('Raw Incoming API Request:', ['body' => $request->getContent()]);
     
         // Validate and normalize input data
         $validatedData = [
@@ -93,7 +93,7 @@ class UpsDataController extends Controller
     
         // Skip update if data has not changed
         if ($cachedData && $cachedData == $validatedData) {
-            Log::info('Skipping update: No change in data.');
+            // Log::info('Skipping update: No change in data.');
             return response()->json([
                 'status' => 200,
                 'message' => 'No changes detected, skipping update',
@@ -107,11 +107,11 @@ class UpsDataController extends Controller
         $upsData = UpsData::where('unique_id', $validatedData['unique_id'])->first();
     
         if ($upsData) {
-            Log::info('Updating existing UPS Data:', ['old_data' => $upsData->toArray(), 'new_data' => $validatedData]);
+            // Log::info('Updating existing UPS Data:', ['old_data' => $upsData->toArray(), 'new_data' => $validatedData]);
             $upsData->update($validatedData);
             $action = 'updated';
         } else {
-            Log::info('Creating new UPS Data:', ['data' => $validatedData]);
+            // Log::info('Creating new UPS Data:', ['data' => $validatedData]);
             $upsData = UpsData::create($validatedData);
             $action = 'created';
         }
@@ -152,7 +152,7 @@ class UpsDataController extends Controller
                 $action
             ])->delay(now()->addSeconds(10));
     
-            Log::info('Google Sheets Job Dispatched', ['data' => $validatedData]);
+            // Log::info('Google Sheets Job Dispatched', ['data' => $validatedData]);
         } catch (\Exception $e) {
             Log::error("Google Sheets Dispatch Error: " . $e->getMessage());
         }
