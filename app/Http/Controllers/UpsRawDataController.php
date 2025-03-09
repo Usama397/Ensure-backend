@@ -10,51 +10,43 @@ use App\Models\UpsRaw;
 
 class UpsRawDataController extends Controller
 {
-    private $storeApiUrl = "https://app.ensureups.com/api/ups-data/store";
+    private $storeApiUrl = "https://app.ensureups.com/api/ups-data/store"; // External API
 
     public function processRawData(Request $request)
     {
-        // Get the raw data from the request
+        // Get the raw data (plain text)
         $rawData = $request->getContent();
-        Log::info('Received Raw UPS Data:', ['raw' => $rawData]);
+        Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
 
-        // Extract unique_id from raw data
+        // Store raw data in ups_raw table
+        $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
+        Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+
+        // Extract and parse the raw data
         $parsedData = $this->parseRawData($rawData);
-        $uniqueId = $parsedData['unique_id'] ?? 'ESP_UNKNOWN';
 
-        // Store the raw data in the `ups_raw` table
-        UpsRaw::create([
-            'unique_id' => $uniqueId,
-            'raw_data' => $rawData
-        ]);
-
-        Log::info('Stored Raw UPS Data:', ['unique_id' => $uniqueId, 'raw' => $rawData]);
-
-        // If parsing fails, return an error response
         if (!$parsedData) {
             return response()->json(['error' => 'Invalid data format'], 400);
         }
 
-        // Check if a record exists for this unique_id
+        // Check if the unique_id already exists in ups_data
         $existingUpsData = UpsData::where('unique_id', $parsedData['unique_id'])->first();
 
         if ($existingUpsData) {
-            // Update the existing record
             $existingUpsData->update($parsedData);
             $action = 'updated';
             Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
         } else {
-            // Create a new record
-            $existingUpsData = UpsData::create($parsedData);
+            UpsData::create($parsedData);
             $action = 'created';
             Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
         }
 
-        // Forward data to store API
+        // Forward parsed data to store API
         $response = Http::post($this->storeApiUrl, $parsedData);
 
         return response()->json([
-            'status' => $existingUpsData->wasRecentlyCreated ? 201 : 200,
+            'status' => $action == 'created' ? 201 : 200,
             'message' => "UPS data $action successfully",
             'store_response' => $response->json()
         ]);
@@ -62,10 +54,11 @@ class UpsRawDataController extends Controller
 
     private function parseRawData($rawData)
     {
+        // Split the raw text into an array using spaces
         $parts = explode(' ', trim($rawData));
 
         if (count($parts) < 10) {
-            return null;
+            return null; // Ensure minimum required fields exist
         }
 
         return [
