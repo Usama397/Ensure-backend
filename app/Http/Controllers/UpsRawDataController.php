@@ -16,7 +16,7 @@ class UpsRawDataController extends Controller
     {
         // Get the raw data from the request (plain text)
         $rawData = trim($request->getContent());
-        // Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
+        Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
 
         // Validate raw data is not empty
         if (empty($rawData)) {
@@ -27,7 +27,7 @@ class UpsRawDataController extends Controller
         // Store raw data in ups_raw table
         try {
             $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
-            // Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+            Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
         } catch (\Exception $e) {
             Log::error('Failed to store raw UPS data', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Database insert failed'], 500);
@@ -48,11 +48,11 @@ class UpsRawDataController extends Controller
         if ($existingUpsData) {
             $existingUpsData->update($parsedData);
             $action = 'updated';
-            // Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
+            Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
         } else {
             UpsData::create($parsedData);
             $action = 'created';
-            // Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
+            Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
         }
 
         // Forward parsed data to store API
