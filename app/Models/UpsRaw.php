@@ -12,6 +12,7 @@ class UpsRaw extends Model
     protected $table = 'ups_raw';
 
     protected $fillable = [
+        'unique_id', // Optional, if extracting unique_id
         'raw_data'
     ];
 }
