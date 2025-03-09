@@ -14,18 +14,31 @@ class UpsRawDataController extends Controller
 
     public function processRawData(Request $request)
     {
-        // Get the raw data (plain text)
-        $rawData = $request->getContent();
+        // Get the raw data from the request (plain text)
+        $rawData = trim($request->getContent());
         Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
 
+        // Validate raw data is not empty
+        if (empty($rawData)) {
+            Log::error('Received empty raw data');
+            return response()->json(['error' => 'Empty raw data'], 400);
+        }
+
         // Store raw data in ups_raw table
-        $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
-        Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+        try {
+            $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
+            Log::info('Stored Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+        } catch (\Exception $e) {
+            Log::error('Failed to store raw UPS data', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Database insert failed'], 500);
+        }
 
         // Extract and parse the raw data
         $parsedData = $this->parseRawData($rawData);
 
+        // If parsing fails, return an error response
         if (!$parsedData) {
+            Log::error('Parsing failed for raw data', ['raw_data' => $rawData]);
             return response()->json(['error' => 'Invalid data format'], 400);
         }
 
@@ -58,7 +71,8 @@ class UpsRawDataController extends Controller
         $parts = explode(' ', trim($rawData));
 
         if (count($parts) < 10) {
-            return null; // Ensure minimum required fields exist
+            Log::error('Invalid data format received', ['raw_data' => $rawData]);
+            return null;
         }
 
         return [
