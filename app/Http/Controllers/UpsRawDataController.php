@@ -16,27 +16,28 @@ class UpsRawDataController extends Controller
     {
         // Get the raw data from the request (plain text)
         $rawData = trim($request->getContent());
-        // Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
+        Log::info('Received Raw UPS Data:', ['raw_data' => $rawData]);
 
         // Validate raw data is not empty
         if (empty($rawData)) {
-            // Log::error('Received empty raw data');
+            Log::error('Received empty raw data');
             return response()->json(['error' => 'Empty raw data'], 400);
         }
 
-        // Split raw data to extract the unique ID
-        $parts = explode(' ', trim($rawData));
-        $uniqueId = $parts[0] ?? 'ESP_UNKNOWN';
+        // Extract unique_id from raw data
+        $unique_id = explode(' ', $rawData)[0] ?? 'ESP_UNKNOWN';
 
-        // Store raw data in ups_raw table (update if unique_id exists, else create new)
-        $existingUpsRaw = UpsRaw::where('unique_id', $uniqueId)->first();
+        // Check if the unique_id already exists in ups_raw table
+        $existingRawData = UpsRaw::where('raw_data', 'LIKE', $unique_id . '%')->first();
 
-        if ($existingUpsRaw) {
-            $existingUpsRaw->update(['raw_data' => $rawData]);
-            // Log::info('Updated Raw Data in ups_raw:', ['id' => $existingUpsRaw->id]);
+        if ($existingRawData) {
+            $existingRawData->update(['raw_data' => $rawData]);
+            $actionRaw = 'updated';
+            Log::info('Updated Existing Raw Data in ups_raw:', ['updated_data' => $rawData]);
         } else {
-            $upsRaw = UpsRaw::create(['unique_id' => $uniqueId, 'raw_data' => $rawData]);
-            // Log::info('Stored New Raw Data in ups_raw:', ['id' => $upsRaw->id]);
+            $upsRaw = UpsRaw::create(['raw_data' => $rawData]);
+            $actionRaw = 'created';
+            Log::info('Stored New Raw Data in ups_raw:', ['id' => $upsRaw->id]);
         }
 
         // Extract and parse the raw data
@@ -54,19 +55,19 @@ class UpsRawDataController extends Controller
         if ($existingUpsData) {
             $existingUpsData->update($parsedData);
             $action = 'updated';
-            // Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
+            Log::info('Updated Existing UPS Data:', ['updated_data' => $parsedData]);
         } else {
             UpsData::create($parsedData);
             $action = 'created';
-            // Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
+            Log::info('Created New UPS Data:', ['new_data' => $parsedData]);
         }
 
-        // Forward parsed data to external API
+        // Forward parsed data to store API
         $response = Http::post($this->storeApiUrl, $parsedData);
 
         return response()->json([
             'status' => $action == 'created' ? 201 : 200,
-            'message' => "UPS data $action successfully",
+            'message' => "UPS data $action successfully, raw data $actionRaw successfully",
             'store_response' => $response->json()
         ]);
     }
@@ -75,18 +76,15 @@ class UpsRawDataController extends Controller
     {
         // Split the raw text into an array using spaces
         $parts = explode(' ', trim($rawData));
-
+    
         if (count($parts) < 10) { // Ensure at least unique_id, voltages, and status bits exist
-            // Log::error('Invalid data format received', ['raw_data' => $rawData]);
+            Log::error('Invalid data format received', ['raw_data' => $rawData]);
             return null;
         }
-
+    
         // Store status bits as an array (no conversion)
         $statusBitsArray = isset($parts[8]) ? str_split($parts[8]) : array_fill(0, 8, '0');
-
-        // Log the extracted status bits
-        // Log::info('Extracted Status Bits:', ['original' => $parts[8], 'array' => $statusBitsArray]);
-
+    
         return [
             'unique_id'             => $parts[0] ?? 'ESP_UNKNOWN',
             'input_voltage'         => isset($parts[1]) ? (float) $parts[1] : 0.0,
@@ -107,4 +105,5 @@ class UpsRawDataController extends Controller
             'charging_status'       => isset($parts[9]) ? (bool) ($parts[9] == '1') : false // Last value for charging status
         ];
     }
+    
 }
