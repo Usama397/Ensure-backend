@@ -9,7 +9,6 @@ return new class extends Migration {
     {
         Schema::create('ups_raw', function (Blueprint $table) {
             $table->id();
-            $table->string('unique_id')->nullable();
             $table->text('raw_data'); // Store the full raw string
             $table->timestamps();
         });
