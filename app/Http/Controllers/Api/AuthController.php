@@ -71,9 +71,11 @@ class AuthController extends Controller
             ], 422);
         }
     
+        $email = $request->email ?? "apple_{$request->apple_id}@example.com"; // Assign a dummy email if Apple ID is used
+    
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'email' => $email,
             'password' => $request->filled('password') ? Hash::make($request->password) : null,
             'phone_no' => $request->phone_no,
             'apple_id' => $request->apple_id,
