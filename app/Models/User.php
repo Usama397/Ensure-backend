@@ -26,6 +26,7 @@ class User extends Authenticatable implements JWTSubject
         'device_name',
         'fcm_token',
         'role',
+        'apple_id',  // ✅ Add this line
         'phone_no',
         'provider',
         'provider_id',
