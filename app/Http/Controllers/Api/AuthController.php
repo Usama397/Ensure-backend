@@ -18,54 +18,70 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'nullable|email',
+            'password' => 'required_without:apple_id',
+            'apple_id' => 'nullable|string|required_without:password', 
         ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'status' => 401,
-                'message' => 'Invalid credentials',
-            ], 401);
+    
+        // Login using Apple ID
+        if ($request->filled('apple_id')) {
+            $user = User::where('apple_id', $request->apple_id)->first();
+    
+            if (!$user) {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Invalid Apple ID',
+                ], 401);
+            }
+        } else {
+            // Login using email & password
+            $user = User::where('email', $request->email)->first();
+    
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'status' => 401,
+                    'message' => 'Invalid credentials',
+                ], 401);
+            }
         }
-
-        $token = $user->createToken('')->plainTextToken;
-
+    
+        $token = $user->createToken('auth_token')->plainTextToken;
+    
         return response()->json([
             'status' => 200,
             'token' => $token,
             'user' => $user,
         ], 200);
     }
-
+    
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            'email' => 'nullable|string|email|max:255|unique:users',
+            'password' => 'required_without:apple_id|string|min:8|confirmed',
             'phone_no' => 'required|string|max:15|unique:users',
+            'apple_id' => 'nullable|string|unique:users|required_without:password',
         ]);
-
+    
         if ($validator->fails()) {
             return response()->json([
                 'message' => $validator->errors(),
                 'status' => 422
             ], 422);
         }
-
+    
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone_no' => $request->phone_no,  // Save phone number
+            'password' => $request->filled('password') ? Hash::make($request->password) : null,
+            'phone_no' => $request->phone_no,
+            'apple_id' => $request->apple_id,
             'role' => 'user',
         ]);
-
+    
         $token = $user->createToken('auth_token')->plainTextToken;
-
+    
         return response()->json([
             'status' => 201,
             'message' => 'User registered successfully',
@@ -73,6 +89,7 @@ class AuthController extends Controller
             'token' => $token,
         ], 201);
     }
+    
 
 
     public function logout(Request $request)
