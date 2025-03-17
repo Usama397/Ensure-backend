@@ -62,6 +62,7 @@ class AuthController extends Controller
             'password' => 'required_without:apple_id|string|min:8|confirmed',
             'phone_no' => 'required|string|max:15|unique:users',
             'apple_id' => 'nullable|string|unique:users|required_without:password',
+            'fcm_token' => 'nullable|string|max:255',
         ]);
     
         if ($validator->fails()) {
@@ -81,6 +82,7 @@ class AuthController extends Controller
             'password' => $request->filled('password') ? Hash::make($request->password) : null, // Allow null password
             'phone_no' => $request->phone_no,
             'apple_id' => $request->apple_id,
+            'fcm_token' => $request->fcm_token,
             'role' => 'user',
         ]);
     
