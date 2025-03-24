@@ -59,3 +59,4 @@ Route::post('/ups-data/store', [Api\UpsDataController::class, 'store']);
 Route::post('/ups-specifications/store', [Api\UpsDataController::class, 'userSpecificationsStore']);
 Route::post('/device-charging', [Api\UpsDataController::class, 'deviceChargingStore']);
 Route::post('/ups/raw-data', [UpsRawDataController::class, 'processRawData']);
+Route::post('/ups/charging-status', [UPSController::class, 'receiveChargingStatus']);
